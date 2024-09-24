@@ -11,7 +11,7 @@ class Follow(db.Model):
     __tablename__ = 'follows'
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
 
 class User(db.Model):
@@ -26,8 +26,8 @@ class User(db.Model):
     name = db.Column(db.String(64))
     location = db.Column(db.String(64))
     about_me = db.Column(db.Text())
-    member_since = db.Column(db.DateTime(), default=datetime.utcnow)
-    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
+    member_since = db.Column(db.DateTime(), default=DateUtils.now_time)
+    last_seen = db.Column(db.DateTime(), default=DateUtils.now_time)
 
     # 图像
     avatar_hash = db.Column(db.String(32))
@@ -111,17 +111,23 @@ class User(db.Model):
     def to_json(self):
         json_user = {
             'url': url_for('api.get_user', id=self.id),
+            'id':self.id,
             'username': self.username,
             'name':self.name,
             'location':self.location,
-            'email':self.email,
             'about_me':self.about_me,
             'member_since': DateUtils.datetime_to_str(self.member_since),
             'last_seen': DateUtils.datetime_to_str(self.last_seen) ,
+            'admin': self.is_administrator(),
+            
+            'email': self.email,
+            'role':self.role.id,
+            'confirmed':self.confirmed,
+
             'posts_url': url_for('api.get_user_posts', id=self.id),
             'followed_posts_url': url_for('api.get_user_followed_posts',
                                           id=self.id),
-            'post_count': self.posts.count()
+            'post_count': self.posts.count(),
         }
         return json_user
 
@@ -129,13 +135,11 @@ class User(db.Model):
 
 @jwt.user_identity_loader
 def user_identify_lookup(user):
-    print("‘user_identify_lookup,", user)
     return user.id
 
 
 @jwt.user_lookup_loader
 def user_lookup_callback(__jwt_header, jwt_data):
-    print("user_lookup_callback", __jwt_header, jwt_data)
     identify = jwt_data["sub"]
     return User.query.filter_by(id=identify).one_or_none()
 
@@ -211,7 +215,7 @@ class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
@@ -219,6 +223,7 @@ class Post(db.Model):
     def to_json(self):
         json_post = {
             'url': url_for('api.get_post', id=self.id),
+            'id':self.id,
             'body': self.body,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
             'author':self.author.username,
@@ -232,7 +237,7 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
     body_html = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
     disabled = db.Column(db.Boolean)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))

@@ -11,9 +11,9 @@ def login():
     user = User.query.filter_by(username=j.get('uiAccountName')).one_or_none()
     if user:
         if user.verify_password(j.get('uiPassword')):
-            token = create_access_token(identity=user)
+            token = create_access_token(identity=user,expires_delta=False)
             user.ping()
-            return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username), 200
+            return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username, admin=user.is_administrator()), 200
     return jsonify(msg="登陆失败")
 
 

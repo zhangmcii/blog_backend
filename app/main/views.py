@@ -1,34 +1,61 @@
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required, current_user, \
     verify_jwt_in_request
 from . import main
-from ..models import User, Post, Permission
-from ..decorators import permission_required
-from flask import jsonify, current_app,request,abort
+from ..models import User, Role, Post, Permission
+from ..decorators import permission_required, admin_required
+from .. import db
+from flask import jsonify, current_app, request, abort
+"""编辑资料、博客文章、关注者信息、评论信息"""
 
-"""博客文章、关注者信息、评论信息"""
 
+# --------------------------- 编辑资料 ---------------------------
+@main.route('/edit-profile', methods=['POST'])
+def edit_peofile():
+    user_info = request.get_json()
+    current_user.name = user_info.get('name')
+    current_user.location = user_info.get('location')
+    current_user.about_me = user_info.get('about_me')
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify(data='success')
+
+@main.route('/edit-profile/<int:id>', methods=['POST'])
+@jwt_required()
+@admin_required
+def edit_peofile_admin(id):
+    user = User.query.get_or_404(id)
+    user_info = request.get_json()
+    user.email = user_info.get('email')
+    user.username = user_info.get('username')
+    user.confirmed = user_info.get('confirmed')
+    user.role = Role.query.get(int(user_info.get('role')))
+
+    user.name = user_info.get('name')
+    user.location = user_info.get('location')
+    user.about_me = user_info.get('about_me')
+
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify(data='success')
 
 # --------------------------- 博客文章 ---------------------------
 @main.route('/', methods=['GET', 'POST'])
 def index():
     """处理博客文章的首页路由"""
-    # if current_user.can(Permission.WRITE):
-    #     return '写入成功'
-    # show_followed = False
-    # if show_followed:
-    #     query = current_user.followed_posts
-    # else:
-    #     query = Post.query
+    if request.method == 'POST' and current_user.can(Permission.WRITE):
+        j = request.get_json()
+        print(j)
+        post = Post(body=j.get('content',None),author=current_user)
+        db.session.add(post)
+        db.session.commit()
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', current_app.config['FLASKY_POSTS_PER_PAGE'], type=int)
     query = Post.query
     paginate = query.order_by(Post.timestamp.desc()).paginate(page=page,
-                                                            per_page=per_page,
-                                                            error_out=False)
+                                                              per_page=per_page,
+                                                              error_out=False)
     posts = paginate.items
-    # 分页
-    return jsonify(data=[post.to_json() for post in posts],total=len(posts))
-
+    return jsonify(data=[post.to_json() for post in posts], total=query.count())
 
 @main.route('/user/<username>')
 @jwt_required(optional=True)
@@ -45,6 +72,8 @@ def user(username):
         return jsonify(data=user.to_json())
     j = user.to_json()
     j.pop('email', None)
+    j.pop('role', None)
+    j.pop('confirmed', None)
     return jsonify(data=j)
 
 
