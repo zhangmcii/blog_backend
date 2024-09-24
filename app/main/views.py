@@ -1,7 +1,7 @@
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required, current_user, \
     verify_jwt_in_request
 from . import main
-from ..models import User, Role, Post, Permission
+from ..models import User, Role, Post, Permission, Comment
 from ..decorators import permission_required, admin_required
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -78,7 +78,7 @@ def user(username):
         return jsonify(data=user.to_json(), msg='success')
     j = user.to_json()
     j.pop('email', None)
-    j.pop('role', None)
+    # j.pop('role', None)
     j.pop('confirmed', None)
     return jsonify(data=j, msg='success')
 
@@ -88,7 +88,7 @@ def user(username):
 def edit(id):
     """编辑博客文章"""
     post = Post.query.get_or_404(id)
-    if current_user.username != post.author and not current_user.can(Permission.ADMIN):
+    if current_user.username != post.author.username and not current_user.can(Permission.ADMIN):
         abort(403)
     # 对表单编辑业务逻辑
     j = request.get_json()
@@ -112,7 +112,6 @@ def follow(username):
     current_user.follow(user)
     db.session.commit()
     return redirect(url_for('.user', username=username))
-    # return jsonify(data='success')
 
 
 @main.route('/unfollow/<username>')
@@ -127,7 +126,6 @@ def unfollow(username):
     current_user.unfollow(user)
     db.session.commit()
     return redirect(url_for('.user', username=username))
-    # return jsonify(data='success')
 
 
 @main.route('/followers/<username>')
@@ -173,8 +171,23 @@ def can(perm):
 def post(id):
     """为文章提供固定链接、博客评论"""
     post = Post.query.get_or_404(id)
-    # 评论业务逻辑
-    return "评论成功"
+    if request.method == 'POST':
+        j = request.get_json()
+        comment = Comment(body=j.get('body'), post=post, author=current_user)
+        db.session.add(comment)
+        db.session.commit()
+        return redirect(url_for('.post', id=post.id, page=-1))
+    page = request.args.get('page', 1, type=int)
+    if page == -1:
+        page = (post.comments.count() - 1) // current_app.config['FLASKY_COMMENTS_PER_PAGE'] + 1
+    pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
+        page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
+        error_out=False)
+    comments = [
+        {'body': item.body, 'timestamp': DateUtils.datetime_to_str(item.timestamp), 'author': item.author.username,
+         'disabled': item.disabled} for
+        item in pagination.items]
+    return jsonify(data=comments, total=post.comments.count(), currentPage=page, msg='success')
 
 
 @main.route('/moderate')
@@ -182,7 +195,16 @@ def post(id):
 @permission_required(Permission.MODERATE)
 def moderate():
     """管理评论"""
-    return "分页的评论"
+    page = request.args.get('page', 1, type=int)
+    query = Comment.query
+    pagination = query.order_by(Comment.timestamp.desc()).paginate(
+        page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
+        error_out=False)
+    comments = [
+        {'body': item.body, 'timestamp': DateUtils.datetime_to_str(item.timestamp), 'author': item.author.username,
+         'id': item.id, 'disabled': item.disabled} for
+        item in pagination.items]
+    return jsonify(data=comments, total=query.count(), msg='success')
 
 
 @main.route('/moderate/enable/<int:id>')

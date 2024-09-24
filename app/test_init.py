@@ -24,5 +24,8 @@ url = 'http://192.168.1.13:8081'
 # print(res)
 #
 #
-res = requests.get(url + '/followers/gaotao')
+# res = requests.get(url + '/followers/gaotao')
+# print(res.text)
+
+res = requests.post(url + '/post/37',json={"body":6666})
 print(res.text)
