@@ -23,6 +23,7 @@ def create_app():
     app.config["FLASKY_ADMIN"] = "zmc_li@foxmail.com"
     app.config["FLASk"] = "zmc_li@foxmail.com"
     app.config["FLASKY_POSTS_PER_PAGE"] = 10
+    app.config["FLASKY_FOLLOWERS_PER_PAGE"] = 10
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(seconds=60*20)
     db.init_app(app)
     jwt.init_app(app)

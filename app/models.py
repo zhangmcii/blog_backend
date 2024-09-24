@@ -45,7 +45,7 @@ class User(db.Model):
 
     @property
     def followed_posts(self):
-        return Post.query.join(Follow, Follow.followed_id == Post.author_id).filter(Follow.followed_id == self.id)
+        return Post.query.join(Follow, Follow.followed_id == Post.author_id).filter(Follow.follower_id == self.id)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -128,6 +128,12 @@ class User(db.Model):
             'followed_posts_url': url_for('api.get_user_followed_posts',
                                           id=self.id),
             'post_count': self.posts.count(),
+            'followers_count':self.followers.count()-1,
+            'followed_count':self.followed.count()-1,
+            # 是否被当前用户关注
+            'is_followed_by_current_user':self.is_followed_by(current_user),
+            # 是否关注了当前用户
+            'is_following_current_user':self.is_following(current_user)
         }
         return json_user
 
