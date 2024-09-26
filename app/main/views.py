@@ -61,7 +61,7 @@ def index():
                                                               per_page=per_page,
                                                               error_out=False)
     posts = paginate.items
-    return jsonify(data=[post.to_json() for post in posts], total=query.count())
+    return jsonify(data=[post.to_json() for post in posts], total=query.count(),msg='success')
 
 
 @main.route('/user/<username>')
@@ -75,8 +75,8 @@ def user(username):
     # posts = user.posts.order_by(Post.timestamp.desc()).all()
     # 如果登录的用户时管理员，则会携带 电子邮件地址
     if current_user and current_user.is_administrator():
-        return jsonify(data=user.to_json(), msg='success')
-    j = user.to_json()
+        return jsonify(data=user.to_json(user), msg='success')
+    j = user.to_json(user)
     j.pop('email', None)
     # j.pop('role', None)
     j.pop('confirmed', None)
@@ -231,3 +231,5 @@ def moderate_disable(id):
     db.session.commit()
     return redirect(url_for('.moderate',
                             page=request.args.get('page', 1, type=int)))
+
+

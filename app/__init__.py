@@ -4,31 +4,32 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required, current_user
-from datetime import timedelta
-
+from flask_mail import Mail
+from flask_redis import FlaskRedis
+from .config import config
 app = Flask(__name__)
 db = SQLAlchemy()
 jwt = JWTManager()
 migrate = Migrate()
+mail = Mail()
+redis = FlaskRedis()
 
-
-def create_app():
+def create_app(config_name):
     app = Flask(__name__)
     # 跨域
     CORS(app)
-    app.config["SQLALCHEMY_DATABASE_URI"] = 'mysql+pymysql://root:1234@localhost:3306/backend_flask?charset=utf8'
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["SECRET_KEY"] = 'my_flask'
-    app.config["JWT_SECRET_KEY"] = "super-secret"
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(seconds=60*20)
-    app.config["FLASKY_ADMIN"] = "zmc_li@foxmail.com"
-    app.config["FLASk"] = "zmc_li@foxmail.com"
-    app.config["FLASKY_POSTS_PER_PAGE"] = 10
-    app.config["FLASKY_FOLLOWERS_PER_PAGE"] = 10
-    app.config["FLASKY_COMMENTS_PER_PAGE"] = 10
+
+    # 读取配置
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
+
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
+    mail.init_app(app)
+    redis.init_app(app)
+
+
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
@@ -56,13 +57,5 @@ def create_app():
         return jsonify(id=current_user.id,
                        password=current_user.password_hash,
                        username=current_user.name), 200
-
-    @app.errorhandler(404)
-    def address_404(e):
-        return "未找到资源", 404
-
-    @app.errorhandler(500)
-    def address_500(e):
-        return "服务端异常", 500
 
     return app

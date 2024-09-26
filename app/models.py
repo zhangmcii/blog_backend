@@ -1,11 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import current_app, url_for, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from . import jwt
 from faker import Faker
 from .utils.time_util import DateUtils
-from flask_jwt_extended import current_user, jwt_required
+from flask_jwt_extended import current_user, jwt_required, get_jwt, create_access_token, decode_token
+import random
+from . import redis
+
 
 class Follow(db.Model):
     __tablename__ = 'follows'
@@ -78,6 +81,61 @@ class User(db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def generate_confirmation_token(self, expiration=3600):
+        additional_claims = {"confirm": self.id}
+        confirm_token = create_access_token(identity=current_user, additional_claims=additional_claims,
+                                            expires_delta=timedelta(seconds=expiration))
+        return confirm_token
+    
+    @staticmethod
+    def generate_code(email, expiration=60 * 3):
+        code = random.randint(100000, 999999)
+        print('email', email)
+        print('code', code)
+        redis.setex(email, expiration, code)
+        return code
+    
+    @staticmethod
+    def compare_code(email, code):
+        try:
+            result = User.get_value(email)
+            print('result',result)
+        except Exception as e:
+            print('redis 取值失败',e)
+            return False
+        if not result:
+            print('无对应键')
+            return False
+        if code != result:
+            print('验证码不匹配')
+            return False
+        return True
+        
+    def confirm(self, email, code):
+        if User.compare_code(email, code):
+            self.confirmed = True
+            db.session.add(self)
+            redis.delete(email)
+            return True
+        else:
+            return False
+    
+    def change_email(self, new_email, code):
+        if User.compare_code(email, code):
+            self.email = new_email
+            db.session.add(self)
+            return True
+        else:
+            return False
+    
+    @staticmethod
+    def get_value(key):
+        # 获取键值
+        value = redis.get(key)
+        if value:
+            return value.decode()
+        return value
+
     def follow(self, user):
         if not self.is_following(user):
             f = Follow(follower=self, followed=user)
@@ -89,13 +147,13 @@ class User(db.Model):
             db.session.delete(f)
 
     def is_following(self, user):
-        if not user.id:
+        if user and not user.id:
             return False
         return self.followed.filter_by(
             followed_id=user.id).first() is not None
 
     def is_followed_by(self, user):
-        if not user.id:
+        if user and not user.id:
             return False
         return self.followers.filter_by(
             follower_id=user.id).first() is not None
@@ -108,35 +166,34 @@ class User(db.Model):
                 db.session.add(user)
                 db.session.commit()
 
-    def to_json(self):
+    def to_json(self,user=current_user):
         json_user = {
             'url': url_for('api.get_user', id=self.id),
-            'id':self.id,
+            'id': self.id,
             'username': self.username,
-            'name':self.name,
-            'location':self.location,
-            'about_me':self.about_me,
+            'name': self.name,
+            'location': self.location,
+            'about_me': self.about_me,
             'member_since': DateUtils.datetime_to_str(self.member_since),
-            'last_seen': DateUtils.datetime_to_str(self.last_seen) ,
+            'last_seen': DateUtils.datetime_to_str(self.last_seen),
             'admin': self.is_administrator(),
-            
+
             'email': self.email,
-            'role':self.role.id,
-            'confirmed':self.confirmed,
+            'role': self.role.id,
+            'confirmed': self.confirmed,
 
             'posts_url': url_for('api.get_user_posts', id=self.id),
             'followed_posts_url': url_for('api.get_user_followed_posts',
                                           id=self.id),
             'post_count': self.posts.count(),
-            'followers_count':self.followers.count()-1,
-            'followed_count':self.followed.count()-1,
+            'followers_count': self.followers.count() - 1,
+            'followed_count': self.followed.count() - 1,
             # 是否被当前用户关注
-            'is_followed_by_current_user':self.is_followed_by(current_user),
+            'is_followed_by_current_user': self.is_followed_by(user),
             # 是否关注了当前用户
-            'is_following_current_user':self.is_following(current_user)
+            'is_following_current_user': self.is_following(user)
         }
         return json_user
-
 
 
 @jwt.user_identity_loader
@@ -229,11 +286,11 @@ class Post(db.Model):
     def to_json(self):
         json_post = {
             'url': url_for('api.get_post', id=self.id),
-            'id':self.id,
+            'id': self.id,
             'body': self.body,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
-            'author':self.author.username,
-            'comment_count':self.comments.count()
+            'author': self.author.username,
+            'comment_count': self.comments.count()
         }
         return json_post
 
