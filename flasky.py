@@ -1,20 +1,23 @@
 import click
+import os
 from flask_migrate import Migrate, upgrade
 from app.models import User, Role
 from app import create_app, db
 from app.models import User, Follow, Role, Permission, Post, Comment
 from app.fake import Fake
 
-app = create_app('default')
+app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 migrate = Migrate(app, db)
 
-@app.cli.command()
+
+@app.cli.command('deploy')
 def deploy():
     upgrade()
 
     Role.insert_roles()
 
     User.add_self_follows()
+    print('deploy command 执行成功')
 
 
 @app.shell_context_processor
@@ -44,6 +47,11 @@ def profile_1(length=25, profile_dir=None):
                                       profile_dir=profile_dir)
     app.run(host='192.168.1.13', port=8081)
 
+
+@app.cli.command('add')
+@click.argument('some')
+def add(some):
+    print(some)
 
 if __name__ == "__main__":
     profile_1()
