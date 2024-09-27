@@ -34,5 +34,7 @@ url = 'http://192.168.1.13:8081'
 # res = requests.post(url + '/auth/register',json={"username":6666, 'password':'123','email':'12'})
 # print(res.text)
 
-res = requests.get(url + '/followers/')
-print(res.text)
+# res = requests.get(url + '/followers/')
+# print(res.text)
+import os
+print(os.getenv('MAIL_PASSWORD'))

@@ -6,8 +6,20 @@ from ..decorators import permission_required, admin_required
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
 from ..utils.time_util import DateUtils
+from flask_sqlalchemy import record_queries
 
 """编辑资料、博客文章、关注者信息、评论信息"""
+
+
+@main.after_app_request
+def after_request(response):
+    for query in record_queries.get_recorded_queries():
+        if query.duration >= current_app.config['FLASKY_SLOW_DB_QUERY_TIME']:
+            current_app.logger.warning(
+                'Slow query: %s\nParameters: %s\nDuration: %fs\nContext: %s\n'
+                % (query.statement, query.parameters, query.duration,
+                   query.context))
+    return response
 
 
 # --------------------------- 编辑资料 ---------------------------
@@ -61,7 +73,7 @@ def index():
                                                               per_page=per_page,
                                                               error_out=False)
     posts = paginate.items
-    return jsonify(data=[post.to_json() for post in posts], total=query.count(),msg='success')
+    return jsonify(data=[post.to_json() for post in posts], total=query.count(), msg='success')
 
 
 @main.route('/user/<username>')
@@ -71,16 +83,20 @@ def user(username):
     user = User.query.filter_by(username=username).first()
     if not user:
         abort(404)
-
-    # posts = user.posts.order_by(Post.timestamp.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    pagination = user.posts.order_by(Post.timestamp.desc()).paginate(
+        page=page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'],
+        error_out=False)
+    posts = pagination.items
     # 如果登录的用户时管理员，则会携带 电子邮件地址
     if current_user and current_user.is_administrator():
-        return jsonify(data=user.to_json(user), msg='success')
+        return jsonify(data=user.to_json(user), posts=[post.to_json() for post in posts], total=user.posts.count(),
+                       msg='success')
     j = user.to_json(user)
     j.pop('email', None)
     # j.pop('role', None)
     j.pop('confirmed', None)
-    return jsonify(data=j, msg='success')
+    return jsonify(data=j, posts=[post.to_json() for post in posts], total=user.posts.count(), msg='success')
 
 
 @main.route('/edit/<int:id>', methods=['GET', 'PUT'])
@@ -122,7 +138,7 @@ def unfollow(username):
     if user is None:
         return jsonify(data='fail', msg="用户名不存在")
     if not current_user.is_following(user):
-        return jsonify(data='fail', msg="你未关注了该用户")
+        return jsonify(data='fail', msg="你未关注该用户")
     current_user.unfollow(user)
     db.session.commit()
     return redirect(url_for('.user', username=username))
@@ -154,7 +170,7 @@ def followed_by(username):
         page=page, per_page=current_app.config['FLASKY_FOLLOWERS_PER_PAGE'],
         error_out=False)
     follows = [{'username': item.followed.username, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
-               for item in pagination.items]
+               for item in pagination.items if item.followed.username != username]
     return jsonify(data=follows, msg='success')
 
 
@@ -231,5 +247,3 @@ def moderate_disable(id):
     db.session.commit()
     return redirect(url_for('.moderate',
                             page=request.args.get('page', 1, type=int)))
-
-

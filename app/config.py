@@ -27,10 +27,14 @@ class Config:
     MAIL_PORT = "587"
     MAIL_USE_TLS = True
     MAIL_USERNAME = "zmc_li@foxmail.com"  # 你的邮箱
-    MAIL_PASSWORD = "wzmvxetcoefxehib"  # 生成的授权码
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')  # 生成的授权码
     MAIL_DEFAULT_SENDER = "zmc_li@foxmail.com"  # 你的邮箱
     
-   
+    # 启用记录查询数据统计
+    SQLALCHEMY_RECORD_QUERIES = True
+    # 查询阈值
+    FLASKY_SLOW_DB_QUERY_TIME = 0.5
+    
     @staticmethod
     def init_app(app):
         pass
@@ -43,6 +47,7 @@ class DevelopmentConfig(Config):
                               'mysql+pymysql://root:1234@localhost:3306/backend_flask?charset=utf8'
     # redis
     REDIS_URL = "redis://:1234@localhost:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+
 
 class TestingConfig(Config):
     TESTING = True

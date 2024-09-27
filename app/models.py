@@ -166,7 +166,7 @@ class User(db.Model):
                 db.session.add(user)
                 db.session.commit()
 
-    def to_json(self,user=current_user):
+    def to_json(self,user):
         json_user = {
             'url': url_for('api.get_user', id=self.id),
             'id': self.id,
@@ -189,9 +189,9 @@ class User(db.Model):
             'followers_count': self.followers.count() - 1,
             'followed_count': self.followed.count() - 1,
             # 是否被当前用户关注
-            'is_followed_by_current_user': self.is_followed_by(user),
+            'is_followed_by_current_user': self.is_followed_by(current_user)  if current_user else self.is_followed_by(user),
             # 是否关注了当前用户
-            'is_following_current_user': self.is_following(user)
+            'is_following_current_user':  self.is_following(current_user)  if current_user else self.is_following(user)
         }
         return json_user
 
