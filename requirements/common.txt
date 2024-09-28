@@ -25,9 +25,9 @@ PyMySQL==1.1.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 redis==5.0.8
-requests==2.32.3
 six==1.16.0
 SQLAlchemy==2.0.34
 typing_extensions==4.12.2
 urllib3==2.2.3
 Werkzeug==3.0.4
+Faker==28.4.1

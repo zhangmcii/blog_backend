@@ -3,6 +3,7 @@ from flask import abort
 from flask_jwt_extended import current_user
 from .models import Permission
 
+
 def permission_required(permission):
     def decorator(f):
         @wraps(f)

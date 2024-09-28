@@ -1,39 +1,35 @@
 import os
+from datetime import timedelta
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-from datetime import timedelta
-
 
 class Config:
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    SECRET_KEY = 'my_flask'
-
     JWT_SECRET_KEY = "super-secret"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=60 * 20)
 
-    # 管理员邮件
-    FLASKY_ADMIN = "zmc_li@foxmail.com"
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.qq.com')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in \
+                   ['true', 'on', '1']
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
-    # 分页
+    FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'
+    FLASKY_MAIL_SENDER = 'Flasky Admin <flasky@example.com>'
+    FLASKY_ADMIN = 'zmc_li@foxmail.com'
+    SSL_REDIRECT = False
+
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_RECORD_QUERIES = True
+
     FLASKY_POSTS_PER_PAGE = 10
     FLASKY_FOLLOWERS_PER_PAGE = 10
     FLASKY_COMMENTS_PER_PAGE = 10
 
-    # 邮件
-    MAIL_SERVER = "smtp.qq.com"
-    MAIL_PORT = "587"
-    MAIL_USE_TLS = True
-    MAIL_USERNAME = "zmc_li@foxmail.com"  # 你的邮箱
-    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')  # 生成的授权码
-    MAIL_DEFAULT_SENDER = "zmc_li@foxmail.com"  # 你的邮箱
-    
-    # 启用记录查询数据统计
-    SQLALCHEMY_RECORD_QUERIES = True
-    # 查询阈值
     FLASKY_SLOW_DB_QUERY_TIME = 0.5
-    
+
     @staticmethod
     def init_app(app):
         pass
@@ -41,24 +37,31 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    DEBUG = True
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-                              'mysql+pymysql://root:1234@localhost:3306/backend_flask?charset=utf8'
+                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/backend_flask?charset=utf8'
     # redis
     REDIS_URL = "redis://:1234@localhost:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
 
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
-                              'sqlite://'
+    DEBUG = True
+    # mysql
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/backend_flask?charset=utf8'
+    # redis
     REDIS_URL = "redis://:1234@localhost:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
     WTF_CSRF_ENABLED = False
 
 
 class ProductionConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-                              'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+    DEBUG = True
+    # mysql
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/backend_flask?charset=utf8'
+    # redis
     REDIS_URL = "redis://:1234@localhost:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
 
     @classmethod

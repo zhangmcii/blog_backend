@@ -1,11 +1,11 @@
-from flask import request, jsonify
 from . import main
 from .. import jwt
+from flask import request, jsonify
 
 
 @jwt.unauthorized_loader
 def missing_token_callback(error):
-    return error, '401'
+    return '401'
 
 @main.app_errorhandler(403)
 def forbidden(e):

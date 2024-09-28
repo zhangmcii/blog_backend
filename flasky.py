@@ -57,7 +57,7 @@ def test(coverage, test_names):
         print('HTML version: file://%s/index.html' % covdir)
         COV.erase()
 
-# 版本过失
+
 @app.cli.command()
 @click.option('--length', default=25,
               help='Number of functions to include in the profiler report.')
@@ -87,13 +87,4 @@ def deploy():
 @click.argument('some')
 def add(some):
     print(some)
-
-# 分析器
-def profile_1(length=25, profile_dir=None):
-    """Start the application under the code profiler."""
-    profile_dir = r'E:\project\Python\Flask_proj\PythonProject3_前后端分离\venv\backend_boke\profile'
-    from werkzeug.middleware.profiler import ProfilerMiddleware
-    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[length],
-                                      profile_dir=profile_dir)
-    app.run(host='192.168.1.13', port=8081)
 

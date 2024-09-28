@@ -1,11 +1,10 @@
-from datetime import datetime, timedelta
-from flask import current_app, url_for, jsonify
+from datetime import timedelta
+from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from . import jwt
-from faker import Faker
 from .utils.time_util import DateUtils
-from flask_jwt_extended import current_user, jwt_required, get_jwt, create_access_token, decode_token
+from flask_jwt_extended import current_user,  create_access_token
 import random
 from . import redis
 
@@ -67,7 +66,7 @@ class Role(db.Model):
 
     def has_permission(self, perm):
         return self.permissions & perm == perm
-    
+
     def __repr__(self):
         return '<Role %r>' % self.name
 
@@ -260,14 +259,16 @@ class User(db.Model):
 
     def __repr__(self):
         return '<User %r>' % self.username
-    
+
+
 class AnonymousUser:
     def can(self, permissions):
         return False
 
     def is_administrator(self):
         return False
-    
+
+
 @jwt.user_identity_loader
 def user_identify_lookup(user):
     return user.id
@@ -277,9 +278,6 @@ def user_identify_lookup(user):
 def user_lookup_callback(__jwt_header, jwt_data):
     identify = jwt_data["sub"]
     return User.query.filter_by(id=identify).one_or_none()
-
-
-
 
 
 class Post(db.Model):
@@ -303,6 +301,7 @@ class Post(db.Model):
         return json_post
 
 
+
 class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
@@ -312,3 +311,24 @@ class Comment(db.Model):
     disabled = db.Column(db.Boolean)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+
+
+    def to_json(self):
+        json_comment = {
+            'url': url_for('api.get_comment', id=self.id),
+            'post_url': url_for('api.get_post', id=self.post_id),
+            'body': self.body,
+            'body_html': self.body_html,
+            'timestamp': self.timestamp,
+            'author_url': url_for('api.get_user', id=self.author_id),
+        }
+        return json_comment
+
+    @staticmethod
+    def from_json(json_comment):
+        body = json_comment.get('body')
+        if body is None or body == '':
+            raise ValidationError('comment does not have a body')
+        return Comment(body=body)
+
+

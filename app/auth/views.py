@@ -5,6 +5,7 @@ from ..models import User
 from .. import db
 from ..email import send_email
 
+
 @auth.before_app_request
 @jwt_required(optional=True)
 def before_request():

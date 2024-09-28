@@ -1,8 +1,7 @@
-# flask 实例
-from flask import Flask, request, jsonify
+from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required, current_user
+from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_redis import FlaskRedis
 from config import config
@@ -35,9 +34,6 @@ def create_app(config_name):
 
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
-
-    from .models import User, Follow, Role, Permission
-    from .fake import Fake
 
     return app
 
