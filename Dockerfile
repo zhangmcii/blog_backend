@@ -1,4 +1,4 @@
-FROM python:3.12.4-alpine
+FROM python:3.9-alpine
 
 ENV FLASK_APP flasky.py
 ENV FLASK_CONFIG production

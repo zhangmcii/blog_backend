@@ -10,6 +10,68 @@ import random
 from . import redis
 
 
+class Permission:
+    FOLLOW = 1
+    COMMENT = 2
+    WRITE = 4
+    MODERATE = 8
+    ADMIN = 16
+
+
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    default = db.Column(db.Boolean, default=False, index=True)
+    permissions = db.Column(db.Integer)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+    def __init__(self, **kwargs):
+        super(Role, self).__init__(**kwargs)
+        if self.permissions is None:
+            self.permissions = 0
+
+    @staticmethod
+    def insert_roles():
+        db.create_all()
+        roles = {
+            'User': [Permission.FOLLOW, Permission.COMMENT, Permission.WRITE],
+            'Moderator': [Permission.FOLLOW, Permission.COMMENT,
+                          Permission.WRITE, Permission.MODERATE],
+            'Administrator': [Permission.FOLLOW, Permission.COMMENT,
+                              Permission.WRITE, Permission.MODERATE,
+                              Permission.ADMIN],
+        }
+        default_role = 'User'
+        for r in roles:
+            role = Role.query.filter_by(name=r).first()
+            if role is None:
+                role = Role(name=r)
+            role.reset_permissions()
+            for perm in roles[r]:
+                role.add_permission(perm)
+            role.default = (role.name == default_role)
+            db.session.add(role)
+        db.session.commit()
+
+    def add_permission(self, perm):
+        if not self.has_permission(perm):
+            self.permissions += perm
+
+    def remove_permission(self, perm):
+        if self.has_permission(perm):
+            self.permissions -= perm
+
+    def reset_permissions(self):
+        self.permissions = 0
+
+    def has_permission(self, perm):
+        return self.permissions & perm == perm
+    
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+
 class Follow(db.Model):
     __tablename__ = 'follows'
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
@@ -86,7 +148,7 @@ class User(db.Model):
         confirm_token = create_access_token(identity=current_user, additional_claims=additional_claims,
                                             expires_delta=timedelta(seconds=expiration))
         return confirm_token
-    
+
     @staticmethod
     def generate_code(email, expiration=60 * 3):
         code = random.randint(100000, 999999)
@@ -94,14 +156,14 @@ class User(db.Model):
         print('code', code)
         redis.setex(email, expiration, code)
         return code
-    
+
     @staticmethod
     def compare_code(email, code):
         try:
             result = User.get_value(email)
-            print('result',result)
+            print('result', result)
         except Exception as e:
-            print('redis 取值失败',e)
+            print('redis 取值失败', e)
             return False
         if not result:
             print('无对应键')
@@ -110,7 +172,7 @@ class User(db.Model):
             print('验证码不匹配')
             return False
         return True
-        
+
     def confirm(self, email, code):
         if User.compare_code(email, code):
             self.confirmed = True
@@ -119,7 +181,7 @@ class User(db.Model):
             return True
         else:
             return False
-    
+
     def change_email(self, new_email, code):
         if User.compare_code(email, code):
             self.email = new_email
@@ -127,7 +189,7 @@ class User(db.Model):
             return True
         else:
             return False
-    
+
     @staticmethod
     def get_value(key):
         # 获取键值
@@ -166,7 +228,7 @@ class User(db.Model):
                 db.session.add(user)
                 db.session.commit()
 
-    def to_json(self,user):
+    def to_json(self, user):
         json_user = {
             'url': url_for('api.get_user', id=self.id),
             'id': self.id,
@@ -189,13 +251,23 @@ class User(db.Model):
             'followers_count': self.followers.count() - 1,
             'followed_count': self.followed.count() - 1,
             # 是否被当前用户关注
-            'is_followed_by_current_user': self.is_followed_by(current_user)  if current_user else self.is_followed_by(user),
+            'is_followed_by_current_user': self.is_followed_by(current_user) if current_user else self.is_followed_by(
+                user),
             # 是否关注了当前用户
-            'is_following_current_user':  self.is_following(current_user)  if current_user else self.is_following(user)
+            'is_following_current_user': self.is_following(current_user) if current_user else self.is_following(user)
         }
         return json_user
 
+    def __repr__(self):
+        return '<User %r>' % self.username
+    
+class AnonymousUser:
+    def can(self, permissions):
+        return False
 
+    def is_administrator(self):
+        return False
+    
 @jwt.user_identity_loader
 def user_identify_lookup(user):
     return user.id
@@ -207,71 +279,7 @@ def user_lookup_callback(__jwt_header, jwt_data):
     return User.query.filter_by(id=identify).one_or_none()
 
 
-class Role(db.Model):
-    __tablename__ = 'roles'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True)
-    default = db.Column(db.Boolean, default=False, index=True)
-    permissions = db.Column(db.Integer)
-    users = db.relationship('User', backref='role', lazy='dynamic')
 
-    def __init__(self, **kwargs):
-        super(Role, self).__init__(**kwargs)
-        if self.permissions is None:
-            self.permissions = 0
-
-    def add_permission(self, perm):
-        if not self.has_permission(perm):
-            self.permissions += perm
-
-    def remove_permission(self, perm):
-        if self.has_permission(perm):
-            self.permissions -= perm
-
-    def reset_permissions(self):
-        self.permissions = 0
-
-    def has_permission(self, perm):
-        return self.permissions & perm == perm
-
-    @staticmethod
-    def insert_roles():
-        db.create_all()
-        roles = {
-            'User': [Permission.FOLLOW, Permission.COMMENT, Permission.WRITE],
-            'Moderator': [Permission.FOLLOW, Permission.COMMENT,
-                          Permission.WRITE, Permission.MODERATE],
-            'Administrator': [Permission.FOLLOW, Permission.COMMENT,
-                              Permission.WRITE, Permission.MODERATE,
-                              Permission.ADMIN],
-        }
-        default_role = 'User'
-        for r in roles:
-            role = Role.query.filter_by(name=r).first()
-            if role is None:
-                role = Role(name=r)
-            role.reset_permissions()
-            for perm in roles[r]:
-                role.add_permission(perm)
-            role.default = (role.name == default_role)
-            db.session.add(role)
-        db.session.commit()
-
-
-class Permission:
-    FOLLOW = 1
-    COMMENT = 2
-    WRITE = 4
-    MODERATE = 8
-    ADMIN = 16
-
-
-class AnonymousUser:
-    def can(self, permissions):
-        return False
-
-    def is_administrator(self):
-        return False
 
 
 class Post(db.Model):

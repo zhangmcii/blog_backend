@@ -1,5 +1,4 @@
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required, current_user, \
-    verify_jwt_in_request
+from flask_jwt_extended import  jwt_required, current_user
 from . import main
 from ..models import User, Role, Post, Permission, Comment
 from ..decorators import permission_required, admin_required

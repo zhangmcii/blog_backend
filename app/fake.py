@@ -9,7 +9,7 @@ fake = Faker('zh-cn')
 
 class Fake:
     locales = 'zh-cn'
-    
+
     @staticmethod
     def users(count=10):
         fake = Faker(Fake.locales)
@@ -43,11 +43,12 @@ class Fake:
         fake = Faker(Fake.locales)
         try:
             # 添加到User表
-            u = User(email=current_app.config['FLASKY_ADMIN'], username='zmc', password='zmc', name='追梦少年', location='上海',
+            u = User(email=current_app.config['FLASKY_ADMIN'], username='zmc', password='zmc', name='追梦少年',
+                     location='上海',
                      about_me='随便说点啥...')
             db.session.add(u)
             db.session.commit()
-            
+
             # 添加管理员的文章到post表
             u1 = User.query.filter_by(username='zmc').first()
             p = Post(body=fake.text(), timestamp=fake.past_date(), author=u1)

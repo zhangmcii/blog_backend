@@ -1,11 +1,11 @@
-from flask import render_template, request, jsonify,redirect,current_app
+from flask import request, jsonify
 from . import main
 from .. import jwt
 
 
 @jwt.unauthorized_loader
 def missing_token_callback(error):
-    return '401'
+    return error, '401'
 
 @main.app_errorhandler(403)
 def forbidden(e):
@@ -37,10 +37,3 @@ def internal_server_error(e):
         return response
     return '500错误', 500
 
-
-
-# 
-# @main.app_errorhandler(404)
-# def not_found(e):
-#     print('拦截执行了')
-#     return '404被拦截'

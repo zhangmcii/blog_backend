@@ -15,7 +15,6 @@ class Config:
 
     # 管理员邮件
     FLASKY_ADMIN = "zmc_li@foxmail.com"
-    FLASK = "zmc_li@foxmail.com"
 
     # 分页
     FLASKY_POSTS_PER_PAGE = 10

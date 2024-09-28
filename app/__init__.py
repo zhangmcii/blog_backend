@@ -7,7 +7,6 @@ from flask_mail import Mail
 from flask_redis import FlaskRedis
 from config import config
 
-app = Flask(__name__)
 db = SQLAlchemy()
 jwt = JWTManager()
 mail = Mail()
