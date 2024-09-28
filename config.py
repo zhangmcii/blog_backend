@@ -13,9 +13,11 @@ class Config:
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in \
                    ['true', 'on', '1']
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or "zmc_li@foxmail.com"  
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-
+    # 发送者的邮箱
+    MAIL_DEFAULT_SENDER = "zmc_li@foxmail.com"    
+    
     FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'
     FLASKY_MAIL_SENDER = 'Flasky Admin <flasky@example.com>'
     FLASKY_ADMIN = 'zmc_li@foxmail.com'
@@ -42,27 +44,27 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
                               'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/backend_flask?charset=utf8'
     # redis
-    REDIS_URL = "redis://:1234@localhost:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+    REDIS_URL = "redis://:1234@192.168.1.13:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
 
 
 class TestingConfig(Config):
     TESTING = True
     DEBUG = True
     # mysql
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+    SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
                               'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/backend_flask?charset=utf8'
     # redis
-    REDIS_URL = "redis://:1234@localhost:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+    REDIS_URL = "redis://:1234@192.168.1.13:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
     WTF_CSRF_ENABLED = False
 
 
 class ProductionConfig(Config):
     DEBUG = True
     # mysql
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/backend_flask?charset=utf8'
     # redis
-    REDIS_URL = "redis://:1234@localhost:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+    REDIS_URL = "redis://:1234@192.168.1.13:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
 
     @classmethod
     def init_app(cls, app):

@@ -4,6 +4,7 @@ source venv/bin/activate
 while true; do
     flask deploy
     if [[ "$?" == "0" ]]; then
+        echo Depoly success
         break
     fi
     echo Deploy command failed, retrying in 5 secs...

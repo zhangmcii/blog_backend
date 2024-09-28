@@ -31,3 +31,4 @@ typing_extensions==4.12.2
 urllib3==2.2.3
 Werkzeug==3.0.4
 Faker==28.4.1
+pytz==2024.2

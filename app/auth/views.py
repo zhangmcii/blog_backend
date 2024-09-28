@@ -1,5 +1,6 @@
-from flask import  request, jsonify
+from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, current_user
+
 from . import auth
 from ..models import User
 from .. import db
@@ -56,10 +57,8 @@ def apply_code():
         db.session.commit()
     code = User.generate_code(email)
     # 重置密码
-    if action == 'reset':
-        current_user = {'username': 'User'}
     send_email(email, 'Confirm Your Account',
-               '', user=current_user, code=code)
+               '', user={'username': 'User'} if action == 'reset' else current_user, code=code)
     return jsonify(data='', msg='success')
 
 
