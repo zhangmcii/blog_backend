@@ -31,12 +31,14 @@ def login():
 
 @auth.route('/register', methods=['POST'])
 def register():
-    print('执行了')
     j = request.get_json()
     u = User.query.filter_by(username=j.get('username')).first()
     if u:
         return jsonify(data='', msg='fail', detail='该用户名已被注册，请换一个')
-    user = User(email=j.get('email'), username=j.get('username'), password=j.get('password'))
+    email = j.get('email')
+    if email == '':
+        email = None
+    user = User(email=email, username=j.get('username'), password=j.get('password'))
     db.session.add(user)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
@@ -72,7 +74,7 @@ def confirm():
         return jsonify(data='', msg='fail', detail='输入的邮件与用户的邮件不一致')
     if current_user.confirm(email, code):
         db.session.commit()
-        return jsonify(data='', msg='success')
+        return jsonify(data='', msg='success',isConfirmed=current_user.confirmed)
     return jsonify(data='', msg='fail', detail='绑定失败')
 
 

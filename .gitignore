@@ -44,3 +44,4 @@ venv
 # Environment files
 .env
 .env-mysql
+.env-redis

@@ -6,6 +6,7 @@ from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
 from ..utils.time_util import DateUtils
 from flask_sqlalchemy import record_queries
+from ..fake import Fake
 
 """编辑资料、博客文章、关注者信息、评论信息"""
 
@@ -246,3 +247,13 @@ def moderate_disable(id):
     db.session.commit()
     return redirect(url_for('.moderate',
                             page=request.args.get('page', 1, type=int)))
+
+@main.route('/user_posts')
+@admin_required
+@jwt_required()
+def add_user_and_post():
+    """批量生成用户和文章"""
+    Role.insert_roles()
+    Fake.users()
+    Fake.posts()
+    return jsonify(data='',msg='success')
