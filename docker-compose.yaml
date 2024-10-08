@@ -1,0 +1,52 @@
+services:
+  flasky:
+    build: .
+    ports:
+      - 192.168.1.13:8081:5000
+    env_file: .env
+    links:
+      - mysql:dbserver
+    restart: always
+  mysql:
+    image: "mysql/mysql-server:latest"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    env_file: .env-mysql
+    restart: always
+  redis:
+    image: "redis:latest"
+    volumes:
+      - E:\ruanjian\redis\redis.conf:/usr/local/etc/redis/redis.conf
+      - redis_data:/data
+    command: redis-server /usr/local/etc/redis/redis.conf
+    env_file: .env-redis
+services:
+  flasky:
+    build: .
+    ports:
+      - 192.168.1.13:8081:5000
+    env_file: .env
+    links:
+      - mysql:dbserver
+    restart: always
+  mysql:
+    image: "mysql/mysql-server:latest"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    env_file: .env-mysql
+    restart: always
+  redis:
+    image: "redis:latest"
+    volumes:
+      - E:\ruanjian\redis\redis.conf:/usr/local/etc/redis/redis.conf
+      - redis_data:/data
+    command: redis-server /usr/local/etc/redis/redis.conf
+    env_file: .env-redis
+
+volumes:
+  mysql_data:
+  redis_data:
+
+volumes:
+  mysql_data:
+  redis_data:
