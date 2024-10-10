@@ -113,8 +113,8 @@ class User(db.Model):
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
-        if self.role is None:
-            if self.email == current_app.config['FLASKY_ADMIN']:
+        if not self.role:
+            if self.email == current_app.config['FLASKY_ADMIN'] and self.confirmed:
                 self.role = Role.query.filter_by(name='Administrator').first()
             else:
                 self.role = Role.query.filter_by(default=True).first()
@@ -175,6 +175,9 @@ class User(db.Model):
     def confirm(self, email, code):
         if User.compare_code(email, code):
             self.confirmed = True
+            # 角色设置管理员
+            if self.email == current_app.config['FLASKY_ADMIN'] and self.confirmed:
+                self.role = Role.query.filter_by(name='Administrator').first()
             db.session.add(self)
             redis.delete(email)
             return True

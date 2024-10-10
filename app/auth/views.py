@@ -1,3 +1,5 @@
+import os
+
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, current_user
 
@@ -47,6 +49,7 @@ def register():
 @auth.route('/applyCode', methods=['POST'])
 @jwt_required(optional=True)
 def apply_code():
+    print('password',os.getenv('MAIL_PASSWORD'))
     email = request.get_json().get('email')
     action = request.get_json().get('action')
     # if action == 'confirm' and User.query.filter_by(email=email).first():
@@ -74,7 +77,7 @@ def confirm():
         return jsonify(data='', msg='fail', detail='输入的邮件与用户的邮件不一致')
     if current_user.confirm(email, code):
         db.session.commit()
-        return jsonify(data='', msg='success',isConfirmed=current_user.confirmed)
+        return jsonify(data='', msg='success',isConfirmed=current_user.confirmed,roleId=current_user.role_id)
     return jsonify(data='', msg='fail', detail='绑定失败')
 
 

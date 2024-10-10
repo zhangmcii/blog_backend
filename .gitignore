@@ -45,3 +45,6 @@ venv
 .env
 .env-mysql
 .env-redis
+
+*.tar
+test*
