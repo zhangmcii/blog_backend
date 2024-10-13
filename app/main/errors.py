@@ -5,7 +5,8 @@ from flask import request, jsonify
 
 @jwt.unauthorized_loader
 def missing_token_callback(error):
-    return '401'
+    return jsonify(msg='token无效'), 401
+
 
 @main.app_errorhandler(403)
 def forbidden(e):
@@ -36,4 +37,3 @@ def internal_server_error(e):
         response.status_code = 500
         return response
     return '500错误', 500
-

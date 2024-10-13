@@ -53,7 +53,7 @@ class TestingConfig(Config):
     DEBUG = True
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
-                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/backend_flask?charset=utf8mb4'
+                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.13:3306/test_backend_flask?charset=utf8mb4'
     # redis
     REDIS_URL = os.environ.get('TEST_REDIS_URL') or "redis://:1234@192.168.1.13:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
     WTF_CSRF_ENABLED = False
