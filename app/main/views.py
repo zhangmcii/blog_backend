@@ -109,7 +109,8 @@ def edit(id):
         abort(403)
     # 对表单编辑业务逻辑
     j = request.get_json()
-    post.body = j.get('content')
+    post.body = j.get('body')
+    post.body_html = j.get('bodyHtml') if j.get('bodyHtml') else None
     db.session.add(post)
     db.session.commit()
     return jsonify(data="success")
