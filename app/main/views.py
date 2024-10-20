@@ -1,4 +1,4 @@
-from flask_jwt_extended import  jwt_required, current_user
+from flask_jwt_extended import jwt_required, current_user
 from . import main
 from ..models import User, Role, Post, Permission, Comment
 from ..decorators import permission_required, admin_required
@@ -60,7 +60,8 @@ def index():
     """处理博客文章的首页路由"""
     if request.method == 'POST' and current_user.can(Permission.WRITE):
         j = request.get_json()
-        post = Post(body=j.get('content', None), author=current_user)
+        body_html = j.get('bodyHtml')
+        post = Post(body=j.get('body'), body_html=body_html if body_html else None, author=current_user)
         db.session.add(post)
         db.session.commit()
     page = request.args.get('page', 1, type=int)
@@ -248,6 +249,7 @@ def moderate_disable(id):
     return redirect(url_for('.moderate',
                             page=request.args.get('page', 1, type=int)))
 
+
 @main.route('/user_posts')
 @admin_required
 @jwt_required()
@@ -256,4 +258,4 @@ def add_user_and_post():
     Role.insert_roles()
     Fake.users()
     Fake.posts()
-    return jsonify(data='',msg='success')
+    return jsonify(data='', msg='success')

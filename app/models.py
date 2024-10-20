@@ -287,6 +287,7 @@ class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
@@ -297,6 +298,7 @@ class Post(db.Model):
             'url': url_for('api.get_post', id=self.id),
             'id': self.id,
             'body': self.body,
+            'body_html': self.body_html,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
             'author': self.author.username,
             'comment_count': self.comments.count()
