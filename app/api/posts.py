@@ -30,7 +30,7 @@ def get_posts():
 @api.route('/posts/<int:id>')
 def get_post(id):
     post = Post.query.get_or_404(id)
-    return jsonify(post.to_json())
+    return jsonify(data=post.to_json(),msg='success')
 
 
 @api.route('/posts/', methods=['POST'])
@@ -46,10 +46,12 @@ def new_post():
 @permission_required(Permission.WRITE)
 def edit_post(id):
     post = Post.query.get_or_404(id)
-    if g.current_user != post.author and \
-            not g.current_user.can(Permission.ADMIN):
-        return forbidden('Insufficient permissions')
-    post.body = request.json.get('body', post.body)
+    if current_user.username != post.author.username and not current_user.can(Permission.ADMIN):
+        abort(403)
+    # 对表单编辑业务逻辑
+    j = request.get_json()
+    post.body = j.get('body',post.body)
+    post.body_html = j.get('bodyHtml') if j.get('bodyHtml') else None
     db.session.add(post)
     db.session.commit()
-    return jsonify(post.to_json())
+    return jsonify(data= post.to_json(),msg="success")

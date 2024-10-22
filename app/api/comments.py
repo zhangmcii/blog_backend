@@ -36,22 +36,11 @@ def get_comment(id):
 def get_post_comments(id):
     post = Post.query.get_or_404(id)
     page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page',current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
-        page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
-        error_out=False)
+        page=page, per_page=per_page, error_out=False)
     comments = pagination.items
-    prev = None
-    if pagination.has_prev:
-        prev = url_for('api.get_post_comments', id=id, page=page-1)
-    next = None
-    if pagination.has_next:
-        next = url_for('api.get_post_comments', id=id, page=page+1)
-    return jsonify({
-        'comments': [comment.to_json() for comment in comments],
-        'prev': prev,
-        'next': next,
-        'count': pagination.total
-    })
+    return jsonify(data=[comment.to_json() for comment in comments],total=pagination.total,msg='success')
 
 
 @api.route('/posts/<int:id>/comments/', methods=['POST'])

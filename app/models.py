@@ -327,12 +327,14 @@ class Comment(db.Model):
 
     def to_json(self):
         json_comment = {
-            'url': url_for('api.get_comment', id=self.id),
-            'post_url': url_for('api.get_post', id=self.post_id),
+            'author':self.author.username,
             'body': self.body,
             'body_html': self.body_html,
-            'timestamp': self.timestamp,
-            'author_url': url_for('api.get_user', id=self.author_id),
+            'disabled':self.disabled,
+            'timestamp': DateUtils.datetime_to_str(self.timestamp),
+            # 'url': url_for('api.get_comment', id=self.id),
+            # 'post_url': url_for('api.get_post', id=self.post_id),
+            # 'author_url': url_for('api.get_user', id=self.author_id),
         }
         return json_comment
 

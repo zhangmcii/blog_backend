@@ -6,7 +6,7 @@ from ..models import User, Post
 @api.route('/users/<int:id>')
 def get_user(id):
     user = User.query.get_or_404(id)
-    return jsonify(user.to_json())
+    return jsonify(data=user.to_json(None), msg='success')
 
 
 @api.route('/users/<int:id>/posts/')

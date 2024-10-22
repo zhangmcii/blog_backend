@@ -185,6 +185,7 @@ def can(perm):
 
 
 # --------------------------- 评论 ---------------------------
+# get 评论已使用api中的
 @main.route('/post/<int:id>', methods=['GET', 'POST'])
 def post(id):
     """为文章提供固定链接、博客评论"""
