@@ -193,6 +193,11 @@ def post(id):
     if request.method == 'POST':
         j = request.get_json()
         comment = Comment(body=j.get('body'), post=post, author=current_user)
+        # 父评论
+        parentCommentId = j.get('parentCommentId', None)
+        if parentCommentId:
+            parent_comment = Comment.query.filter_by(id=parentCommentId).first()
+            comment = Comment(body=j.get('body'), post=post, author=current_user, parent_comment=parent_comment)
         db.session.add(comment)
         db.session.commit()
         return redirect(url_for('.post', id=post.id, page=-1))

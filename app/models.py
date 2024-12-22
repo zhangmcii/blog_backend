@@ -324,14 +324,23 @@ class Comment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
+    # 子评论
+    parent_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    # remote_side设置为多对一
+    parent_comment = db.relationship('Comment', back_populates='sub_comment', remote_side=[id])
+    # 默认一对多
+    sub_comment = db.relationship('Comment', back_populates='parent_comment', cascade='all, delete-orphan')
+
 
     def to_json(self):
         json_comment = {
+            'id':self.id,
             'author':self.author.username,
             'body': self.body,
             'body_html': self.body_html,
             'disabled':self.disabled,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
+            'parent_comment_id':self.parent_comment_id
             # 'url': url_for('api.get_comment', id=self.id),
             # 'post_url': url_for('api.get_post', id=self.post_id),
             # 'author_url': url_for('api.get_user', id=self.author_id),
