@@ -1,6 +1,6 @@
 from flask_jwt_extended import jwt_required, current_user
 from . import main
-from ..models import User, Role, Post, Permission, Comment
+from ..models import User, Role, Post, Permission, Comment, Follow
 from ..decorators import permission_required, admin_required
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -153,7 +153,7 @@ def followers(username):
     if user is None:
         return jsonify(data='fail', msg="用户名不存在")
     page = request.args.get('page', 1, type=int)
-    pagination = user.followers.paginate(
+    pagination = user.followers.order_by(Follow.timestamp.desc()).paginate(
         page=page, per_page=current_app.config['FLASKY_FOLLOWERS_PER_PAGE'],
         error_out=False)
     follows = [{'username': item.follower.username, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
@@ -168,7 +168,7 @@ def followed_by(username):
     if user is None:
         return jsonify(data='fail', msg="用户名不存在")
     page = request.args.get('page', 1, type=int)
-    pagination = user.followed.paginate(
+    pagination = user.followed.order_by(Follow.timestamp.desc()).paginate(
         page=page, per_page=current_app.config['FLASKY_FOLLOWERS_PER_PAGE'],
         error_out=False)
     follows = [{'username': item.followed.username, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
