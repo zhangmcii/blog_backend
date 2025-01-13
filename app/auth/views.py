@@ -27,7 +27,7 @@ def login():
             token = create_access_token(identity=user, expires_delta=False)
             user.ping()
             return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username,
-                           admin=user.is_administrator(), roleId=user.role_id, isConfirmed=user.confirmed), 200
+                           admin=user.is_administrator(),image=user.image, roleId=user.role_id, isConfirmed=user.confirmed), 200
     return jsonify(msg="登陆失败")
 
 

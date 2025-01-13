@@ -260,9 +260,20 @@ def moderate_disable(id):
 @main.route('/user_posts')
 @admin_required
 @jwt_required()
-def add_user_and_post():
+def user_image():
     """批量生成用户和文章"""
     Role.insert_roles()
     Fake.users()
     Fake.posts()
     return jsonify(data='', msg='success')
+
+
+@main.route('/image', methods=['POST'])
+@jwt_required()
+def add_user_and_post():
+    """存储用户图像地址"""
+    user_info = request.get_json()
+    current_user.image = user_info.get('image')
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify(data='',msg='success')

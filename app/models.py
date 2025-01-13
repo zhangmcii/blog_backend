@@ -92,7 +92,7 @@ class User(db.Model):
     about_me = db.Column(db.Text())
     member_since = db.Column(db.DateTime(), default=DateUtils.now_time)
     last_seen = db.Column(db.DateTime(), default=DateUtils.now_time)
-
+    image = db.Column(db.String(255))
     # 图像
     avatar_hash = db.Column(db.String(32))
 
@@ -240,6 +240,7 @@ class User(db.Model):
             'about_me': self.about_me,
             'member_since': DateUtils.datetime_to_str(self.member_since),
             'last_seen': DateUtils.datetime_to_str(self.last_seen),
+            'image': self.image,
             'admin': self.is_administrator(),
 
             'email': self.email,
