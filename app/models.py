@@ -302,7 +302,8 @@ class Post(db.Model):
             'body_html': self.body_html,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
             'author': self.author.username,
-            'comment_count': self.comments.count()
+            'comment_count': self.comments.count(),
+            'image':self.author.image
         }
         return json_post
     

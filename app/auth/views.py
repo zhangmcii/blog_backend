@@ -40,7 +40,7 @@ def register():
     email = j.get('email')
     if email == '':
         email = None
-    user = User(email=email, username=j.get('username'), password=j.get('password'))
+    user = User(email=email, username=j.get('username'), password=j.get('password'),image=j.get('image',''))
     db.session.add(user)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
