@@ -156,9 +156,9 @@ def followers(username):
     pagination = user.followers.order_by(Follow.timestamp.desc()).paginate(
         page=page, per_page=current_app.config['FLASKY_FOLLOWERS_PER_PAGE'],
         error_out=False)
-    follows = [{'username': item.follower.username, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
+    follows = [{'username': item.follower.username,'image':item.follower.image, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
                for item in pagination.items if item.follower.username != username]
-    return jsonify(data=follows, msg='success')
+    return jsonify(data=follows, msg='success', total=user.followers.count()-1)
 
 
 @main.route('/followed_by/<username>')
@@ -171,9 +171,9 @@ def followed_by(username):
     pagination = user.followed.order_by(Follow.timestamp.desc()).paginate(
         page=page, per_page=current_app.config['FLASKY_FOLLOWERS_PER_PAGE'],
         error_out=False)
-    follows = [{'username': item.followed.username, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
+    follows = [{'username': item.followed.username, 'image':item.followed.image, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
                for item in pagination.items if item.followed.username != username]
-    return jsonify(data=follows, msg='success')
+    return jsonify(data=follows, msg='success', total=user.followed.count()-1)
 
 
 @main.route('/can/<int:perm>')
