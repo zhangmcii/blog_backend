@@ -156,8 +156,16 @@ def followers(username):
     pagination = user.followers.order_by(Follow.timestamp.desc()).paginate(
         page=page, per_page=current_app.config['FLASKY_FOLLOWERS_PER_PAGE'],
         error_out=False)
-    follows = [{'username': item.follower.username,'image':item.follower.image, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
-               for item in pagination.items if item.follower.username != username]
+    follows = []
+    for item in pagination.items:
+        if item.follower.username != username:
+            is_following_back = Follow.query.filter_by(follower=user, followed=item.follower).first() is not None
+            follows.append({
+                'username': item.follower.username,
+                'image': item.follower.image,
+                'timestamp': DateUtils.datetime_to_str(item.timestamp),
+                'is_following': is_following_back
+            })
     return jsonify(data=follows, msg='success', total=user.followers.count()-1)
 
 
@@ -171,9 +179,17 @@ def followed_by(username):
     pagination = user.followed.order_by(Follow.timestamp.desc()).paginate(
         page=page, per_page=current_app.config['FLASKY_FOLLOWERS_PER_PAGE'],
         error_out=False)
-    follows = [{'username': item.followed.username, 'image':item.followed.image, 'timestamp': DateUtils.datetime_to_str(item.timestamp)}
-               for item in pagination.items if item.followed.username != username]
-    return jsonify(data=follows, msg='success', total=user.followed.count()-1)
+    follows = []
+    for item in pagination.items:
+        if item.followed.username!= username:
+            is_following_back = Follow.query.filter_by(follower=item.followed, followed=user).first() is not None
+            follows.append({
+                'username': item.followed.username,
+                'image': item.followed.image,
+                'timestamp': DateUtils.datetime_to_str(item.timestamp),
+                'is_following_back': is_following_back
+            })
+    return jsonify(data=follows, msg='success', total=user.followed.count() - 1)
 
 
 @main.route('/can/<int:perm>')
