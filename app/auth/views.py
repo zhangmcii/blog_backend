@@ -26,8 +26,9 @@ def login():
         if user.verify_password(j.get('uiPassword')):
             token = create_access_token(identity=user, expires_delta=False)
             user.ping()
-            return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username,
-                           admin=user.is_administrator(),image=user.image, roleId=user.role_id, isConfirmed=user.confirmed), 200
+            return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username, name=user.name,
+                           admin=user.is_administrator(), image=user.image, roleId=user.role_id,
+                           isConfirmed=user.confirmed), 200
     return jsonify(msg="登陆失败")
 
 
@@ -40,7 +41,7 @@ def register():
     email = j.get('email')
     if email == '':
         email = None
-    user = User(email=email, username=j.get('username'), password=j.get('password'),image=j.get('image',''))
+    user = User(email=email, username=j.get('username'), password=j.get('password'), image=j.get('image', ''))
     db.session.add(user)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
@@ -49,7 +50,7 @@ def register():
 @auth.route('/applyCode', methods=['POST'])
 @jwt_required(optional=True)
 def apply_code():
-    print('password',os.getenv('MAIL_PASSWORD'))
+    print('password', os.getenv('MAIL_PASSWORD'))
     email = request.get_json().get('email')
     action = request.get_json().get('action')
     # if action == 'confirm' and User.query.filter_by(email=email).first():
@@ -77,7 +78,7 @@ def confirm():
         return jsonify(data='', msg='fail', detail='输入的邮件与用户的邮件不一致')
     if current_user.confirm(email, code):
         db.session.commit()
-        return jsonify(data='', msg='success',isConfirmed=current_user.confirmed,roleId=current_user.role_id)
+        return jsonify(data='', msg='success', isConfirmed=current_user.confirmed, roleId=current_user.role_id)
     return jsonify(data='', msg='fail', detail='绑定失败')
 
 
