@@ -2,7 +2,7 @@ import os
 
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, current_user
-
+from ..decorators import admin_required
 from . import auth
 from ..models import User
 from .. import db
@@ -132,3 +132,17 @@ def reset_password():
         db.session.commit()
         return jsonify(data='', msg='success', detail='')
     return jsonify(data='', msg='fail', detail='验证码错误')
+
+@auth.route('/helpChangePassword', methods=['POST'])
+@admin_required
+@jwt_required()
+def change_password():
+    username = request.get_json().get('username')
+    new_password = request.get_json().get('newPassword')
+    user = User.query.filter_by(username=username).first()
+    if user:
+        user.password = new_password
+        db.session.add(user)
+        db.session.commit()
+        return jsonify(data='', msg='success', detail='')
+    return jsonify(data='', msg='fail', detail='用户不存在')
