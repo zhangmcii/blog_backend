@@ -15,7 +15,7 @@ def forbidden(e):
         response = jsonify({'error': 'forbidden'})
         response.status_code = 403
         return response
-    return '403错误', 403
+    return '权限不足', 403
 
 
 @main.app_errorhandler(404)

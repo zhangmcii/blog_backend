@@ -136,7 +136,7 @@ def reset_password():
 @auth.route('/helpChangePassword', methods=['POST'])
 @admin_required
 @jwt_required()
-def change_password():
+def change_password_admin():
     username = request.get_json().get('username')
     new_password = request.get_json().get('newPassword')
     user = User.query.filter_by(username=username).first()
