@@ -13,11 +13,11 @@ class Config:
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in \
                    ['true', 'on', '1']
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or "zmc_li@foxmail.com"  
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or "zmc_li@foxmail.com"
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     # 发送者的邮箱
-    MAIL_DEFAULT_SENDER = "zmc_li@foxmail.com"    
-    
+    MAIL_DEFAULT_SENDER = "zmc_li@foxmail.com"
+
     FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'
     FLASKY_MAIL_SENDER = 'Flasky Admin <flasky@example.com>'
     FLASKY_ADMIN = 'zmc_li@foxmail.com'
@@ -42,10 +42,13 @@ class DevelopmentConfig(Config):
     DEBUG = True
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.8:3306/backend_flask?charset=utf8mb4'
+                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
+                                                                                  '') + ':3306/backend_flask?charset=utf8mb4'
     # redis
-    REDIS_URL = "redis://:1234@192.168.1.8:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
-    REDIS_URL = os.environ.get('DEV_REDIS_URL') or "redis://:1234@192.168.1.8:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+    REDIS_URL = "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
+                                             '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+    REDIS_URL = os.environ.get('DEV_REDIS_URL') or "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
+                                                                                '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
 
 
 class TestingConfig(Config):
@@ -53,9 +56,11 @@ class TestingConfig(Config):
     DEBUG = True
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
-                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.8:3306/test_backend_flask?charset=utf8mb4'
+                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
+                                                                                  '') + ':3306/test_backend_flask?charset=utf8mb4'
     # redis
-    REDIS_URL = os.environ.get('TEST_REDIS_URL') or "redis://:1234@192.168.1.8:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+    REDIS_URL = os.environ.get('TEST_REDIS_URL') or "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
+                                                                                 '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
     WTF_CSRF_ENABLED = False
 
 
@@ -63,9 +68,11 @@ class ProductionConfig(Config):
     DEBUG = True
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@192.168.1.8:3306/backend_flask?charset=utf8mb4'
+                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
+                                                                                  '') + ':3306/backend_flask?charset=utf8mb4'
     # redis
-    REDIS_URL = os.environ.get('REDIS_URL') or "redis://:1234@192.168.1.8:6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
+    REDIS_URL = os.environ.get('REDIS_URL') or "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
+                                                                            '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
 
     @classmethod
     def init_app(cls, app):

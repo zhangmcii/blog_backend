@@ -4,9 +4,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from . import jwt
 from .utils.time_util import DateUtils
-from flask_jwt_extended import current_user,  create_access_token
+from flask_jwt_extended import current_user, create_access_token
 import random
 from . import redis
+from .exceptions import ValidationError
 
 
 class Permission:
@@ -98,6 +99,8 @@ class User(db.Model):
 
     posts = db.relationship('Post', backref='author', lazy='dynamic')
 
+    praises = db.relationship('Praise', backref='author', lazy='dynamic')
+
     # 关注
     followed = db.relationship('Follow', foreign_keys=[Follow.follower_id],
                                backref=db.backref('follower', lazy='joined'), lazy='dynamic',
@@ -185,7 +188,7 @@ class User(db.Model):
             return False
 
     def change_email(self, new_email, code):
-        if User.compare_code(email, code):
+        if User.compare_code(new_email, code):
             self.email = new_email
             db.session.add(self)
             return True
@@ -293,6 +296,7 @@ class Post(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
+    praise = db.relationship('Praise', backref='post', lazy='dynamic')
 
     def to_json(self):
         json_post = {
@@ -303,11 +307,12 @@ class Post(db.Model):
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
             'author': self.author.username,
             'comment_count': self.comments.count(),
-            'image':self.author.image
+            'image': self.author.image,
+            'praise_num': self.praise.count(),
+            'has_praised': Praise.hasPraised(self.id)
         }
         return json_post
-    
-    
+
     @staticmethod
     def from_json(json_post):
         body = json_post.get('body')
@@ -333,16 +338,15 @@ class Comment(db.Model):
     # 默认一对多
     sub_comment = db.relationship('Comment', back_populates='parent_comment', cascade='all, delete-orphan')
 
-
     def to_json(self):
         json_comment = {
-            'id':self.id,
-            'author':self.author.username,
+            'id': self.id,
+            'author': self.author.username,
             'body': self.body,
             'body_html': self.body_html,
-            'disabled':self.disabled,
+            'disabled': self.disabled,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
-            'parent_comment_id':self.parent_comment_id
+            'parent_comment_id': self.parent_comment_id
             # 'url': url_for('api.get_comment', id=self.id),
             # 'post_url': url_for('api.get_post', id=self.post_id),
             # 'author_url': url_for('api.get_user', id=self.author_id),
@@ -357,3 +361,13 @@ class Comment(db.Model):
         return Comment(body=body)
 
 
+class Praise(db.Model):
+    __tablename__ = 'praise'
+    id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+
+    @staticmethod
+    def hasPraised(post_id):
+        r = Praise.query.filter_by(post_id=post_id, author_id=current_user.id).first()
+        return True if r else False

@@ -1,6 +1,6 @@
 from flask_jwt_extended import jwt_required, current_user
 from . import main
-from ..models import User, Role, Post, Permission, Comment, Follow
+from ..models import User, Role, Post, Permission, Comment, Follow, Praise
 from ..decorators import permission_required, admin_required
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -293,3 +293,16 @@ def add_user_and_post():
     db.session.add(current_user)
     db.session.commit()
     return jsonify(data='',msg='success')
+
+
+@main.route('/praise/<int:id>', methods=['GET', 'POST'])
+@jwt_required()
+def praise(id):
+    """文章点赞"""
+    post = Post.query.get_or_404(id)
+    if request.method == 'POST':
+        praise = Praise(post=post, author=current_user)
+        db.session.add(praise)
+        db.session.commit()
+        return jsonify(praise_total=post.praise.count(),has_praised=True, msg='success',detail='')
+    return jsonify(praise_toal= post.praise.count(),msg='success',detail='')
