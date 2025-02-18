@@ -294,6 +294,7 @@ class Post(db.Model):
     body_html = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
     praise = db.relationship('Praise', backref='post', lazy='dynamic')
 
@@ -305,11 +306,10 @@ class Post(db.Model):
             'body_html': self.body_html,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
             'author': self.author.username,
-            'nick_name': self.author.name,
             'comment_count': self.comments.count(),
             'image': self.author.image,
             'praise_num': self.praise.count(),
-            'has_praised': Praise.hasPraised(self.id)
+            'has_praised': Praise.has_praised(self.id)
         }
         return json_post
 
@@ -368,6 +368,8 @@ class Praise(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
     @staticmethod
-    def hasPraised(post_id):
+    def has_praised(post_id):
+        if not current_user:
+            return False
         r = Praise.query.filter_by(post_id=post_id, author_id=current_user.id).first()
         return True if r else False
