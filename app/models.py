@@ -309,7 +309,7 @@ class Post(db.Model):
             'comment_count': self.comments.count(),
             'image': self.author.image,
             'praise_num': self.praise.count(),
-            'has_praised': Praise.hasPraised(self.id)
+            'has_praised': Praise.has_praised(self.id)
         }
         return json_post
 
@@ -368,6 +368,8 @@ class Praise(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
     @staticmethod
-    def hasPraised(post_id):
+    def has_praised(post_id):
+        if not current_user:
+            return False
         r = Praise.query.filter_by(post_id=post_id, author_id=current_user.id).first()
         return True if r else False
