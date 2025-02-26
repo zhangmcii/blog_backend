@@ -8,8 +8,8 @@ if os.path.exists(dotenv_path):
 
 COV = None
 if os.environ.get('FLASK_COVERAGE'):
-    print(22)
     import coverage
+
     COV = coverage.coverage(branch=True, include='app/*')
     COV.start()
 
@@ -17,7 +17,7 @@ import sys
 import click
 from flask_migrate import Migrate, upgrade
 from app import create_app, db
-from app.models import User, Follow, Role, Permission, Post, Comment
+from app.models import User, Follow, Role, Permission, Post, Comment, Praise, Log
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 migrate = Migrate(app, db)
@@ -26,7 +26,7 @@ migrate = Migrate(app, db)
 @app.shell_context_processor
 def make_shell_context():
     return dict(db=db, User=User, Follow=Follow, Role=Role,
-                Permission=Permission, Post=Post, Comment=Comment)
+                Permission=Permission, Post=Post, Comment=Comment, Praise=Praise, Log=Log)
 
 
 @app.cli.command()
@@ -83,8 +83,8 @@ def deploy():
     # ensure all users are following themselves
     User.add_self_follows()
 
+
 @app.cli.command('add')
 @click.argument('some')
 def add(some):
     print(some)
-
