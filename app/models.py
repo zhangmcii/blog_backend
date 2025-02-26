@@ -381,6 +381,16 @@ class Log(db.Model):
     __tablename__ = 'log'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
-    operate = db.Column(db.String(64))
     ip = db.Column(db.String(100))
+    operate = db.Column(db.String(64))
     operate_time = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
+
+    def to_json(self):
+        json_log = {
+            'id': self.id,
+            'username': self.username,
+            'ip': self.ip,
+            'operate': self.operate,
+            'operate_time': self.operate_time
+        }
+        return json_log
