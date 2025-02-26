@@ -2,6 +2,7 @@ FROM python:3.12-alpine
 
 ENV FLASK_APP flasky.py
 ENV FLASK_CONFIG docker
+ENV TZ "Asia/Shanghai"
 
 RUN adduser -D flasky
 USER flasky
