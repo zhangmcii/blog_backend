@@ -310,14 +310,13 @@ def praise(id):
 
 
 @main.route('/logs', methods=['GET'])
-@admin_required
 @jwt_required()
 def logs():
     """处理博客文章的首页路由"""
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', current_app.config['FLASKY_LOG_PER_PAGE'], type=int)
     query = Log.query
-    paginate = query.order_by(Post.timestamp.desc()).paginate(page=page,
+    paginate = query.order_by(Log.operate_time.desc()).paginate(page=page,
                                                               per_page=per_page,
                                                               error_out=False)
     logs = paginate.items

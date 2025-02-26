@@ -24,12 +24,10 @@ def admin_required(f):
 
 def log_operate(f):
     def decorate(*args, **kwargs):
-        if current_user:
-            oplog = Log(username=current_user.username, operate='访问首页', ip=request.remote_addr)
-        else:
-            oplog = Log(username='游客', operate='访问首页', ip=request.remote_addr)
-        db.session.add(oplog)
-        db.session.commit()
+        if request.args.get('page', 1, type=int) == 1:
+            op_log = Log(username=current_user.username if current_user else '游客', operate='访问首页', ip=request.remote_addr)
+            db.session.add(op_log)
+            db.session.commit()
         r = f(*args, **kwargs)
         return r
 

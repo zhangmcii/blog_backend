@@ -391,6 +391,6 @@ class Log(db.Model):
             'username': self.username,
             'ip': self.ip,
             'operate': self.operate,
-            'operate_time': self.operate_time
+            'operateTime': self.operate_time
         }
         return json_log

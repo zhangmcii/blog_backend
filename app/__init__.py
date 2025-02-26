@@ -37,7 +37,7 @@ def create_app(config_name):
 
     @app.errorhandler(Exception)
     def error_handler(e):
-        return jsonify(error='e'), 500
+        return jsonify(error=str(e)), 500
 
     return app
 
