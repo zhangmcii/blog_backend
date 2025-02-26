@@ -288,11 +288,11 @@ def user_image():
 @jwt_required()
 def add_user_and_post():
     """存储用户图像地址"""
-    user_info = request.get_json()
-    current_user.image = user_info.get('image')
+    image = request.get_json().get('image')
+    current_user.image = image
     db.session.add(current_user)
     db.session.commit()
-    return jsonify(data='',msg='success')
+    return jsonify(image=image,msg='success')
 
 
 @main.route('/praise/<int:id>', methods=['GET', 'POST'])
