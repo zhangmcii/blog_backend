@@ -1,6 +1,6 @@
 from flask_jwt_extended import jwt_required, current_user
 from . import main
-from ..models import User, Role, Post, Permission, Comment, Follow, Praise
+from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log
 from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -307,3 +307,19 @@ def praise(id):
         db.session.commit()
         return jsonify(praise_total=post.praise.count(),has_praised=True, msg='success',detail='')
     return jsonify(praise_toal= post.praise.count(),msg='success',detail='')
+
+
+@main.route('/logs', methods=['GET'])
+@admin_required
+@jwt_required()
+def logs():
+    """处理博客文章的首页路由"""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', current_app.config['FLASKY_LOG_PER_PAGE'], type=int)
+    query = Log.query
+    paginate = query.order_by(Post.timestamp.desc()).paginate(page=page,
+                                                              per_page=per_page,
+                                                              error_out=False)
+    logs = paginate.items
+    return jsonify(data=[log.to_json() for log in logs], total=query.count(), msg='success')
+

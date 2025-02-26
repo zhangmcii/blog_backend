@@ -29,6 +29,7 @@ class Config:
     FLASKY_POSTS_PER_PAGE = 10
     FLASKY_FOLLOWERS_PER_PAGE = 15
     FLASKY_COMMENTS_PER_PAGE = 10
+    FLASKY_LOG_PER_PAGE = 15
 
     FLASKY_SLOW_DB_QUERY_TIME = 0.5
 
@@ -55,9 +56,10 @@ class TestingConfig(Config):
     TESTING = True
     DEBUG = True
     # mysql
-    SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
-                              'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
-                                                                                  '') + ':3306/test_backend_flask?charset=utf8mb4'
+    # SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
+    #                           'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
+    #                                                                               '') + ':3306/test_backend_flask?charset=utf8mb4'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
     # redis
     REDIS_URL = os.environ.get('TEST_REDIS_URL') or "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
                                                                                  '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
