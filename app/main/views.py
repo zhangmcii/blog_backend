@@ -1,7 +1,7 @@
 from flask_jwt_extended import jwt_required, current_user
 from . import main
 from ..models import User, Role, Post, Permission, Comment, Follow, Praise
-from ..decorators import permission_required, admin_required
+from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
 from ..utils.time_util import DateUtils
@@ -56,6 +56,7 @@ def edit_peofile_admin(id):
 
 # --------------------------- 博客文章 ---------------------------
 @main.route('/', methods=['GET', 'POST'])
+@log_operate
 def index():
     """处理博客文章的首页路由"""
     if request.method == 'POST' and current_user.can(Permission.WRITE):

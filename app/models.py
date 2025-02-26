@@ -375,3 +375,12 @@ class Praise(db.Model):
             return False
         r = Praise.query.filter_by(post_id=post_id, author_id=current_user.id).first()
         return True if r else False
+
+
+class Log(db.Model):
+    __tablename__ = 'log'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), index=True)
+    operate = db.Column(db.String(64))
+    ip = db.Column(db.String(100))
+    operate_time = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
