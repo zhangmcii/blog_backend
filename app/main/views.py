@@ -167,7 +167,7 @@ def followers(username):
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
                 'is_following': is_following_back
             })
-    return jsonify(data=follows, msg='success', total=user.followers.count()-1)
+    return jsonify(data=follows, msg='success', total=user.followers.count() - 1)
 
 
 @main.route('/followed_by/<username>')
@@ -182,7 +182,7 @@ def followed_by(username):
         error_out=False)
     follows = []
     for item in pagination.items:
-        if item.followed.username!= username:
+        if item.followed.username != username:
             is_following_back = Follow.query.filter_by(follower=item.followed, followed=user).first() is not None
             follows.append({
                 'username': item.followed.username,
@@ -293,7 +293,7 @@ def add_user_and_post():
     current_user.image = image
     db.session.add(current_user)
     db.session.commit()
-    return jsonify(image=image,msg='success')
+    return jsonify(image=image, msg='success')
 
 
 @main.route('/praise/<int:id>', methods=['GET', 'POST'])
@@ -305,11 +305,12 @@ def praise(id):
         praise = Praise(post=post, author=current_user)
         db.session.add(praise)
         db.session.commit()
-        return jsonify(praise_total=post.praise.count(),has_praised=True, msg='success',detail='')
-    return jsonify(praise_toal= post.praise.count(),msg='success',detail='')
+        return jsonify(praise_total=post.praise.count(), has_praised=True, msg='success', detail='')
+    return jsonify(praise_toal=post.praise.count(), msg='success', detail='')
 
 
 @main.route('/logs', methods=['GET'])
+@admin_required
 @jwt_required()
 def logs():
     """处理博客文章的首页路由"""
@@ -317,8 +318,24 @@ def logs():
     per_page = request.args.get('per_page', current_app.config['FLASKY_LOG_PER_PAGE'], type=int)
     query = Log.query
     paginate = query.order_by(Log.operate_time.desc()).paginate(page=page,
-                                                              per_page=per_page,
-                                                              error_out=False)
+                                                                per_page=per_page,
+                                                                error_out=False)
     logs = paginate.items
     return jsonify(data=[log.to_json() for log in logs], total=query.count(), msg='success')
 
+
+@main.route('/deleteLog', methods=['POST'])
+@admin_required
+@jwt_required()
+def delete_log():
+    try:
+        ids = request.get_json().get('ids', [])
+        if not ids:
+            return
+        print(ids)
+        Log.query.filter(Log.id.in_(ids)).delete()
+        db.session.commit()
+        return jsonify(data='', msg='success')
+    except Exception:
+        db.session.rollback()
+        return jsonify(data='', msg='fail')

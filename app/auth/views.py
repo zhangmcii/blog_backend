@@ -35,6 +35,8 @@ def login():
 @auth.route('/register', methods=['POST'])
 def register():
     j = request.get_json()
+    if not j.get('password'):
+        return jsonify(data='', msg='fail', detail='密码不能设置为空字符串')
     u = User.query.filter_by(username=j.get('username')).first()
     if u:
         return jsonify(data='', msg='fail', detail='该用户名已被注册，请换一个')
@@ -107,6 +109,8 @@ def change_email():
 def change_password():
     oldPassword = request.get_json().get('oldPassword')
     newPassword = request.get_json().get('newPassword')
+    if not newPassword:
+        return jsonify(data='', msg='fail', detail='密码不能设置为空字符串')
     if current_user.verify_password(oldPassword):
         current_user.password = newPassword
         db.session.add(current_user)
