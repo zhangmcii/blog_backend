@@ -332,7 +332,6 @@ def delete_log():
         ids = request.get_json().get('ids', [])
         if not ids:
             return
-        print(ids)
         Log.query.filter(Log.id.in_(ids)).delete()
         db.session.commit()
         return jsonify(data='', msg='success')

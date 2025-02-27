@@ -45,7 +45,7 @@ def log_operate(f):
 
         # 判断访问间隔
         now = DateUtils.now_time()
-        should_log = not last_visit or DateUtils.datetime_diff(DateUtils.datetime_to_str(now),
+        should_log = not last_visit or DateUtils.datetime_diff(now,
                                                                DateUtils.datetime_to_str(last_visit.operate_time), 5)
 
         # 记录日志
