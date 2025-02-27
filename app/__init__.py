@@ -5,6 +5,7 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_redis import FlaskRedis
 from config import config
+import os
 
 db = SQLAlchemy()
 jwt = JWTManager()
@@ -37,7 +38,8 @@ def create_app(config_name):
 
     @app.errorhandler(Exception)
     def error_handler(e):
+        if os.environ.get('FLASK_DEBUG', None):
+            print(e)
         return jsonify(error=str(e)), 500
 
     return app
-
