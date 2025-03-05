@@ -6,8 +6,8 @@ from ..decorators import admin_required
 from . import auth
 from ..models import User
 from .. import db
-from ..tasks import send_email
-
+from ..mycelery.tasks import send_email
+from ..utils.time_util import DateUtils
 
 @auth.before_app_request
 @jwt_required(optional=True)
@@ -51,6 +51,7 @@ def register():
 
 @auth.route('/applyCode', methods=['POST'])
 @jwt_required(optional=True)
+@DateUtils.record_time
 def apply_code():
     print('password', os.getenv('MAIL_PASSWORD'))
     email = request.get_json().get('email')
@@ -66,7 +67,7 @@ def apply_code():
         db.session.commit()
     code = User.generate_code(email)
     # 重置密码
-    send_email.delay(email, 'Confirm Your Account', '', user='User', code=code)
+    send_email.delay(email, 'Confirm Your Account', user='User', code=code)
     return jsonify(data='', msg='success')
 
 
