@@ -6,7 +6,7 @@ from ..decorators import admin_required
 from . import auth
 from ..models import User
 from .. import db
-from ..email import send_email
+from ..tasks import send_email
 
 
 @auth.before_app_request
@@ -66,8 +66,7 @@ def apply_code():
         db.session.commit()
     code = User.generate_code(email)
     # 重置密码
-    send_email(email, 'Confirm Your Account',
-               '', user={'username': 'User'} if action == 'reset' else current_user, code=code)
+    send_email.delay(email, 'Confirm Your Account', '', user='User', code=code)
     return jsonify(data='', msg='success')
 
 
