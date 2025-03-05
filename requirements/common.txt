@@ -33,4 +33,5 @@ Werkzeug==3.0.4
 Faker==28.4.1
 pytz==2024.2
 celery==5.4.0
+eventlet==0.39.0
 

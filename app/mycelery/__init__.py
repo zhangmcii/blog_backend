@@ -5,6 +5,8 @@ def celery_init_app(app) -> Celery:
     """
        启动目录(mac环境)：  cd blog_backend
        celery -A app.make_celery worker --loglevel INFO
+
+       windows: celery -A app.make_celery worker --loglevel INFO -P eventlet
     """
     class FlaskTask(Task):
         def __call__(self, *args: object, **kwargs: object) -> object:

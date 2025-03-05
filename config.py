@@ -63,7 +63,6 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    DEBUG = True
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',

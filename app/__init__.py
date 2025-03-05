@@ -23,11 +23,11 @@ def create_app(config_name):
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
 
+    host = os.getenv('REDIS_HOST') or os.getenv('FLASK_RUN_HOST')
     app.config.from_mapping(
         CELERY=dict(
-            broker_url=os.getenv('BROKER_URL', "redis://:1234@" + os.getenv('FLASK_RUN_HOST', '') + ":6379/1") ,
-            result_backend=os.getenv('RESULT_BACKEND', "redis://:1234@" + os.getenv('FLASK_RUN_HOST', '') + ":6379/2") ,
-            task_ignore_result=False,
+            broker_url=f'redis://:1234@{host}:6379/1',
+            result_backend=f'redis://:1234@{host}:6379/1',
         ),
     )
 
@@ -51,6 +51,5 @@ def create_app(config_name):
         if os.environ.get('FLASK_DEBUG', None):
             print(e)
         return jsonify(error=str(e)), 500
-
 
     return app
