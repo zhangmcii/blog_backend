@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
-import sys
-from xmlrpc.client import DateTime
-
+import time
 import pytz
 
 
@@ -48,3 +46,17 @@ class DateUtils:
         r1 = datetime.strptime(t1, '%Y-%m-%d %H:%M:%S')
         r2 = datetime.strptime(t2, '%Y-%m-%d %H:%M:%S')
         return abs(r1 - r2) > timedelta(minutes=diff)
+
+    @staticmethod
+    def record_time(func):
+        """记录函数执行时间"""
+        def decorate(*args, **kwargs):
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            elapsed = time.perf_counter() - start
+            name = func.__name__
+            arg_str = ', '.join(repr(arg) for arg in args)
+            print(f'[{elapsed:0.8f}s] {name}({arg_str}) -> {result!r}')
+            return result
+
+        return decorate

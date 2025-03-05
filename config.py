@@ -40,19 +40,16 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    DEBUG = True
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
                               'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
                                                                                   '') + ':3306/backend_flask?charset=utf8mb4'
     # redis
-    REDIS_URL = "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
-                                             '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
     REDIS_URL = os.environ.get('DEV_REDIS_URL') or "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
                                                                                 '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>
 
-
 class TestingConfig(Config):
+    # TESTING = True会导致flask_mail发送不了邮件
     TESTING = True
     DEBUG = True
     # mysql

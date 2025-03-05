@@ -5,6 +5,7 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_redis import FlaskRedis
 from config import config
+from .mycelery import celery_init_app
 import os
 
 db = SQLAlchemy()
@@ -22,10 +23,19 @@ def create_app(config_name):
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
 
+    app.config.from_mapping(
+        CELERY=dict(
+            broker_url=os.getenv('BROKER_URL', "redis://:1234@" + os.getenv('FLASK_RUN_HOST', '') + ":6379/1") ,
+            result_backend=os.getenv('RESULT_BACKEND', "redis://:1234@" + os.getenv('FLASK_RUN_HOST', '') + ":6379/2") ,
+            task_ignore_result=False,
+        ),
+    )
+
     db.init_app(app)
     jwt.init_app(app)
     mail.init_app(app)
     redis.init_app(app)
+    celery_init_app(app)
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
@@ -41,5 +51,6 @@ def create_app(config_name):
         if os.environ.get('FLASK_DEBUG', None):
             print(e)
         return jsonify(error=str(e)), 500
+
 
     return app
