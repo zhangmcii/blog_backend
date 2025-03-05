@@ -25,8 +25,8 @@ def create_app(config_name):
 
     app.config.from_mapping(
         CELERY=dict(
-            broker_url="redis://:1234@172.18.66.143:6379/1",
-            result_backend="redis://:1234@172.18.66.143:6379/2",
+            broker_url="redis://:1234@" + os.getenv('FLASK_RUN_HOST', '') + ":6379/1",
+            result_backend="redis://:1234@" + os.getenv('FLASK_RUN_HOST', '') + ":6379/2",
             task_ignore_result=False,
         ),
     )

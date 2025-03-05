@@ -11,4 +11,5 @@ while true; do
     sleep 5
 done
 
+celery -A app.make_celery worker --loglevel INFO &
 exec gunicorn -b :5000 --access-logfile - --error-logfile - flasky:app
