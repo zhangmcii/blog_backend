@@ -1,6 +1,7 @@
 #!/bin/sh
 source venv/bin/activate
 
+# 转为utf-8
 while true; do
     flask deploy
     if [[ "$?" == "0" ]]; then
