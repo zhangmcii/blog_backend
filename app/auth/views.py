@@ -53,7 +53,6 @@ def register():
 @jwt_required(optional=True)
 @DateUtils.record_time
 def apply_code():
-    print('password', os.getenv('MAIL_PASSWORD'))
     email = request.get_json().get('email')
     action = request.get_json().get('action')
     # if action == 'confirm' and User.query.filter_by(email=email).first():

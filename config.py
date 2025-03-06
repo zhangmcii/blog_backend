@@ -7,6 +7,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     JWT_SECRET_KEY = "super-secret"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=60 * 20)
+    # JWT_TOKEN_LOCATION = ["query_string"]  # 允许从URL参数获取Token
+    # JWT_QUERY_STRING_NAME = "token"  # 指定参数名为 "token"
 
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.qq.com')

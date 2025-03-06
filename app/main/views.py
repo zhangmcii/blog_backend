@@ -1,4 +1,4 @@
-from flask_jwt_extended import jwt_required, current_user
+from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, verify_jwt_in_request
 from . import main
 from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log
 from ..decorators import permission_required, admin_required, log_operate
@@ -7,7 +7,8 @@ from flask import jsonify, current_app, request, abort, url_for, redirect
 from ..utils.time_util import DateUtils
 from flask_sqlalchemy import record_queries
 from ..fake import Fake
-
+from .. import socketio
+from flask_socketio import join_room, ConnectionRefusedError
 """编辑资料、博客文章、关注者信息、评论信息"""
 
 
@@ -338,3 +339,79 @@ def delete_log():
     except Exception:
         db.session.rollback()
         return jsonify(data='', msg='fail')
+
+
+
+@main.route('/comm', methods=['POST'])
+@jwt_required()
+def create_comment():
+    current_user_id = get_jwt_identity()
+
+    # data = request.get_json()
+    # article_id = data.get('article_id')
+    # content = data.get('content')
+    #
+    # # 保存评论（假设已有Comment模型）
+    # # ...
+    #
+    # # 获取文章作者ID
+    # article = Article.query.get(article_id)
+    # if not article:
+    #     return jsonify({"error": "Article not found"}), 404
+    # author_id = article.author_id
+    #
+    # # 创建通知记录
+    # notification = Notification(
+    #     receiver_id=author_id,
+    #     trigger_user_id=current_user_id,
+    #     article_id=article_id,
+    #     type='comment',
+    #     content=content
+    # )
+    # db.session.add(notification)
+    # db.session.commit()
+
+    # 通过WebSocket推送通知给作者
+    socketio.emit('new_notification', {
+        'type': 'comment',
+        'message': f'用户{current_user_id}评论了你的文章',
+        # 'article_id': article_id
+    })  # 发送到作者的房间
+
+    return jsonify({"message": "Comment created"}), 200
+
+
+# 处理WebSocket连接
+@socketio.on('connect')
+def handle_connect(auth):
+    print('前端连接了', auth)
+    try:
+        # 从Socket.IO连接中获取JWT（通常通过查询参数或头传递）
+        token = request.args.get('token')
+        print('token:', token)
+        if not token:
+            raise ConnectionRefusedError('Unauthorized')
+        # verify_jwt_in_request()
+        # raw_token = token.replace("Bearer ", "", 1)
+        # print('raw_token', raw_token)
+        # # 手动解码 Token
+        # decoded_token = decode_token(raw_token)
+        # current_user_id = decoded_token["sub"]
+
+        # 检查用户是否存在
+        # if not User.query.get(current_user_id):
+        #     raise ConnectionRefusedError("用户不存在")
+
+        # 将用户加入以自身ID命名的房间
+        join_room(str(current_user))
+        print(f"User {current_user} connected to room")
+
+    except Exception as e:
+        print(f"WebSocket connection failed: {str(e)}")
+        raise ConnectionRefusedError('Authentication failed')
+
+
+# 处理WebSocket连接
+@socketio.on('disconnect')
+def handle_connect():
+    print(f'用户{current_user_id}断开了')

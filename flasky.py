@@ -16,7 +16,7 @@ if os.environ.get('FLASK_COVERAGE'):
 import sys
 import click
 from flask_migrate import Migrate, upgrade
-from app import create_app, db
+from app import create_app, db, socketio
 from app.models import User, Follow, Role, Permission, Post, Comment, Praise, Log
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
@@ -88,3 +88,7 @@ def deploy():
 @click.argument('some')
 def add(some):
     print(some)
+
+if __name__ == '__main__':
+    print('正在启动')
+    socketio.run(app, host='192.168.1.7', port=8082 ,debug=True)

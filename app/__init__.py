@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_redis import FlaskRedis
+from flask_socketio import SocketIO
 from config import config
 from .mycelery import celery_init_app
 import os
@@ -12,7 +13,7 @@ db = SQLAlchemy()
 jwt = JWTManager()
 mail = Mail()
 redis = FlaskRedis()
-
+socketio = SocketIO()
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -36,6 +37,7 @@ def create_app(config_name):
     mail.init_app(app)
     redis.init_app(app)
     celery_init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
