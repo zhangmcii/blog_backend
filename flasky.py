@@ -91,4 +91,4 @@ def add(some):
 
 if __name__ == '__main__':
     print('正在启动')
-    socketio.run(app, host='192.168.1.7', port=8082 ,debug=True)
+    socketio.run(app, host=os.getenv('FLASK_RUN_HOST'), port=os.getenv('FLASK_RUN_PORT') ,debug=True)

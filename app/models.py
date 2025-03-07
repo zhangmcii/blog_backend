@@ -8,7 +8,7 @@ from flask_jwt_extended import current_user, create_access_token
 import random
 from . import redis
 from .exceptions import ValidationError
-
+from enum import Enum
 
 class Permission:
     FOLLOW = 1
@@ -78,6 +78,27 @@ class Follow(db.Model):
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
+class NotificationType(Enum):
+    COMMENT = 'comment'
+    LIKE = 'like'
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    # 通知类型
+    type = db.Column(db.Enum(NotificationType))
+    # 是否已读
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=DateUtils.now_time)
+
+    # 接收者（文章作者）
+    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # 触发者（评论/点赞用户）
+    trigger_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # 关联文章id
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    # 评论id
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -109,6 +130,12 @@ class User(db.Model):
                                 backref=db.backref('followed', lazy='joined'), lazy='dynamic',
                                 cascade='all, delete-orphan')
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
+
+    received_notification = db.relationship('Notification', foreign_keys=[Notification.receiver_id],
+                               backref='receiver', lazy='dynamic')
+
+    triggered_notification = db.relationship('Notification', foreign_keys=[Notification.trigger_user_id],
+                                            backref='trigger_user', lazy='dynamic')
 
     @property
     def followed_posts(self):
@@ -297,6 +324,7 @@ class Post(db.Model):
 
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
     praise = db.relationship('Praise', backref='post', lazy='dynamic')
+    notifications = db.relationship('Notification', backref='post', lazy='dynamic')
 
     def to_json(self):
         json_post = {
@@ -338,6 +366,7 @@ class Comment(db.Model):
     parent_comment = db.relationship('Comment', back_populates='sub_comment', remote_side=[id])
     # 默认一对多
     sub_comment = db.relationship('Comment', back_populates='parent_comment', cascade='all, delete-orphan')
+    notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
 
     def to_json(self):
         json_comment = {
