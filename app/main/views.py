@@ -1,6 +1,6 @@
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token
 from . import main
-from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log
+from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType
 from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -9,6 +9,7 @@ from flask_sqlalchemy import record_queries
 from ..fake import Fake
 from .. import socketio
 from flask_socketio import join_room, ConnectionRefusedError
+
 """编辑资料、博客文章、关注者信息、评论信息"""
 
 
@@ -209,15 +210,26 @@ def post(id):
     """为文章提供固定链接、博客评论"""
     post = Post.query.get_or_404(id)
     if request.method == 'POST':
+        # POST请求需要验证jwt
+        jwt_required()
         j = request.get_json()
         comment = Comment(body=j.get('body'), post=post, author=current_user)
         # 父评论
-        parentCommentId = j.get('parentCommentId', None)
-        if parentCommentId:
-            parent_comment = Comment.query.filter_by(id=parentCommentId).first()
+        parent_comment_id = j.get('parentCommentId', None)
+        if parent_comment_id:
+            parent_comment = Comment.query.filter_by(id=parent_comment_id).first()
             comment = Comment(body=j.get('body'), post=post, author=current_user, parent_comment=parent_comment)
+        notification = Notification(receiver_id=post.author_id, trigger_user_id=comment.author_id, post_id=post.id,
+                                    comment_id=comment.id, type=NotificationType.COMMENT)
         db.session.add(comment)
+        db.session.add(notification)
         db.session.commit()
+        # 通过WebSocket推送通知给作者
+        socketio.emit('new_notification', {
+            'type': NotificationType.COMMENT,
+            'message': f'用户{current_user.id}评论了你的文章',
+            'article_id': post.id
+        }, to=str(post.author_id))  # 发送到作者的房间
         return redirect(url_for('.post', id=post.id, page=-1))
     page = request.args.get('page', 1, type=int)
     if page == -1:
@@ -341,7 +353,6 @@ def delete_log():
         return jsonify(data='', msg='fail')
 
 
-
 @main.route('/comm', methods=['POST'])
 @jwt_required()
 def create_comment():
@@ -401,7 +412,7 @@ def handle_connect(auth):
         # 检查用户是否存在
         if not User.query.get(current_user_id):
             raise ConnectionRefusedError("用户不存在")
-        print('current_user_id:',current_user_id)
+        print('current_user_id:', current_user_id)
         # 将用户加入以自身ID命名的房间
         join_room(str(current_user_id))
         print(f"用户 {current_user_id} connected to room")

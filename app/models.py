@@ -96,7 +96,7 @@ class Notification(db.Model):
     # 触发者（评论/点赞用户）
     trigger_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     # 关联文章id
-    article_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
     # 评论id
     comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
 
