@@ -226,7 +226,7 @@ def post(id):
         db.session.commit()
         # 通过WebSocket推送通知给作者
         socketio.emit('new_notification', {
-            'type': NotificationType.COMMENT,
+            'type': NotificationType.COMMENT.value,
             'message': f'用户{current_user.id}评论了你的文章',
             'article_id': post.id
         }, to=str(post.author_id))  # 发送到作者的房间
