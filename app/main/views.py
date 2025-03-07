@@ -1,4 +1,4 @@
-from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token
 from . import main
 from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log
 from ..decorators import permission_required, admin_required, log_operate
@@ -383,6 +383,7 @@ def create_comment():
 
 # 处理WebSocket连接
 @socketio.on('connect')
+@jwt_required(optional=True)
 def handle_connect(auth):
     print('前端连接了', auth)
     try:
@@ -391,20 +392,19 @@ def handle_connect(auth):
         print('token:', token)
         if not token:
             raise ConnectionRefusedError('Unauthorized')
-        # verify_jwt_in_request()
-        # raw_token = token.replace("Bearer ", "", 1)
-        # print('raw_token', raw_token)
-        # # 手动解码 Token
-        # decoded_token = decode_token(raw_token)
-        # current_user_id = decoded_token["sub"]
+        raw_token = token.replace("Bearer ", "", 1)
+        print('raw_token', raw_token)
+        # 手动解码 Token
+        decoded_token = decode_token(raw_token)
+        current_user_id = decoded_token["sub"]
 
         # 检查用户是否存在
-        # if not User.query.get(current_user_id):
-        #     raise ConnectionRefusedError("用户不存在")
-
+        if not User.query.get(current_user_id):
+            raise ConnectionRefusedError("用户不存在")
+        print('current_user_id:',current_user_id)
         # 将用户加入以自身ID命名的房间
-        join_room(str(current_user))
-        print(f"User {current_user} connected to room")
+        join_room(str(current_user_id))
+        print(f"用户 {current_user_id} connected to room")
 
     except Exception as e:
         print(f"WebSocket connection failed: {str(e)}")
@@ -413,5 +413,5 @@ def handle_connect(auth):
 
 # 处理WebSocket连接
 @socketio.on('disconnect')
-def handle_connect():
-    print(f'用户{current_user_id}断开了')
+def handle_connect(reason):
+    print(f'用户断开了', reason)
