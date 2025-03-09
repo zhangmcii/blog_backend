@@ -79,8 +79,9 @@ class Follow(db.Model):
     timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
 class NotificationType(Enum):
-    COMMENT = 'comment'
-    LIKE = 'like'
+    COMMENT = '评论'
+    REPLY = "回复"
+    LIKE = '点赞'
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -99,6 +100,22 @@ class Notification(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
     # 评论id
     comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+
+    def to_json(self):
+        data = {
+            'id': self.id,
+            'type': self.type.value,
+            'image': self.trigger_user.image,
+            'time': DateUtils.datetime_to_str(self.created_at),
+            'triggerNickName': self.trigger_user.name,
+            'triggerUsername': self.trigger_user.username,
+            'content': '',
+            'article_id': self.post_id,
+            'comment_id': self.comment_id,
+            'isRead': self.is_read,
+
+        }
+        return data
 
 class User(db.Model):
     __tablename__ = 'users'

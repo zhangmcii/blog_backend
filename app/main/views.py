@@ -219,17 +219,14 @@ def post(id):
         if parent_comment_id:
             parent_comment = Comment.query.filter_by(id=parent_comment_id).first()
             comment = Comment(body=j.get('body'), post=post, author=current_user, parent_comment=parent_comment)
+        # 将挂起的更改发送到数据库，但不会提交事务
+        db.session.add(comment)
+        db.session.flush()
         notification = Notification(receiver_id=post.author_id, trigger_user_id=comment.author_id, post_id=post.id,
                                     comment_id=comment.id, type=NotificationType.COMMENT)
-        db.session.add(comment)
         db.session.add(notification)
         db.session.commit()
-        # 通过WebSocket推送通知给作者
-        socketio.emit('new_notification', {
-            'type': NotificationType.COMMENT.value,
-            'message': f'用户{current_user.id}评论了你的文章',
-            'article_id': post.id
-        }, to=str(post.author_id))  # 发送到作者的房间
+        socketio.emit('new_notification', notification.to_json(), to=str(post.author_id))  # 发送到作者的房间
         return redirect(url_for('.post', id=post.id, page=-1))
     page = request.args.get('page', 1, type=int)
     if page == -1:
@@ -357,31 +354,6 @@ def delete_log():
 @jwt_required()
 def create_comment():
     current_user_id = get_jwt_identity()
-
-    # data = request.get_json()
-    # article_id = data.get('article_id')
-    # content = data.get('content')
-    #
-    # # 保存评论（假设已有Comment模型）
-    # # ...
-    #
-    # # 获取文章作者ID
-    # article = Article.query.get(article_id)
-    # if not article:
-    #     return jsonify({"error": "Article not found"}), 404
-    # author_id = article.author_id
-    #
-    # # 创建通知记录
-    # notification = Notification(
-    #     receiver_id=author_id,
-    #     trigger_user_id=current_user_id,
-    #     article_id=article_id,
-    #     type='comment',
-    #     content=content
-    # )
-    # db.session.add(notification)
-    # db.session.commit()
-
     # 通过WebSocket推送通知给作者
     socketio.emit('new_notification', {
         'type': 'comment',
@@ -396,15 +368,12 @@ def create_comment():
 @socketio.on('connect')
 @jwt_required(optional=True)
 def handle_connect(auth):
-    print('前端连接了', auth)
     try:
         # 从Socket.IO连接中获取JWT（通常通过查询参数或头传递）
         token = request.args.get('token')
-        print('token:', token)
         if not token:
             raise ConnectionRefusedError('Unauthorized')
         raw_token = token.replace("Bearer ", "", 1)
-        print('raw_token', raw_token)
         # 手动解码 Token
         decoded_token = decode_token(raw_token)
         current_user_id = decoded_token["sub"]
@@ -412,10 +381,10 @@ def handle_connect(auth):
         # 检查用户是否存在
         if not User.query.get(current_user_id):
             raise ConnectionRefusedError("用户不存在")
-        print('current_user_id:', current_user_id)
         # 将用户加入以自身ID命名的房间
         join_room(str(current_user_id))
-        print(f"用户 {current_user_id} connected to room")
+        u = User.query.get(current_user_id)
+        print(f"用户 {u.username} connected to room")
 
     except Exception as e:
         print(f"WebSocket connection failed: {str(e)}")
@@ -426,3 +395,18 @@ def handle_connect(auth):
 @socketio.on('disconnect')
 def handle_connect(reason):
     print(f'用户断开了', reason)
+
+
+@main.route('/notification/unread')
+@jwt_required()
+def get_unread_notification():
+    d = Notification.query.filter_by(receiver_id=current_user.id).order_by(Notification.created_at.desc()).all()
+    return jsonify(data=[item.to_json() for item in d], msg='success')
+
+@main.route('/notification/read', methods=['POST'])
+@jwt_required()
+def mark_read_notification():
+    ids = request.get_json().get('ids',[])
+    Notification.query.filter(Notification.id.in_(ids),Notification.receiver_id == current_user.id).update({'is_read':True}, synchronize_session=False)
+    db.session.commit()
+    return jsonify(data='', msg='success')
