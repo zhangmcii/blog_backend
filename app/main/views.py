@@ -222,11 +222,19 @@ def post(id):
         # 将挂起的更改发送到数据库，但不会提交事务
         db.session.add(comment)
         db.session.flush()
-        notification = Notification(receiver_id=post.author_id, trigger_user_id=comment.author_id, post_id=post.id,
+        notification_post = Notification(receiver_id=post.author_id, trigger_user_id=comment.author_id, post_id=post.id,
                                     comment_id=comment.id, type=NotificationType.COMMENT)
-        db.session.add(notification)
+        db.session.add(notification_post)
+        if parent_comment_id:
+            # 建议新的通知实例，通知回复的人
+            notification_reply = Notification(receiver_id=parent_comment.author_id, trigger_user_id=comment.author_id,
+                                              post_id=post.id,
+                                              comment_id=comment.id, type=NotificationType.REPLY)
+            db.session.add(notification_reply)
         db.session.commit()
-        socketio.emit('new_notification', notification.to_json(), to=str(post.author_id))  # 发送到作者的房间
+        socketio.emit('new_notification', notification_post.to_json(), to=str(post.author_id))  # 发送到作者的房间
+        if parent_comment_id:
+            socketio.emit('new_notification', notification_reply.to_json(), to=str(parent_comment.author_id))  # 发送到父评论的房间
         return redirect(url_for('.post', id=post.id, page=-1))
     page = request.args.get('page', 1, type=int)
     if page == -1:
@@ -314,6 +322,16 @@ def praise(id):
     if request.method == 'POST':
         praise = Praise(post=post, author=current_user)
         db.session.add(praise)
+
+        # 将挂起的更改发送到数据库，但不会提交事务
+        if current_user.id != post.author_id:
+            db.session.flush()
+            notification = Notification(receiver_id=post.author_id, trigger_user_id=praise.author_id, post_id=post.id,
+                                        comment_id=praise.id, type=NotificationType.LIKE)
+            db.session.add(notification)
+        db.session.commit()
+        if current_user.id != post.author_id:
+            socketio.emit('new_notification', notification.to_json(), to=str(post.author_id))  # 发送到作者的房间
         db.session.commit()
         return jsonify(praise_total=post.praise.count(), has_praised=True, msg='success', detail='')
     return jsonify(praise_toal=post.praise.count(), msg='success', detail='')
