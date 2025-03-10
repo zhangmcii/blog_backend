@@ -210,31 +210,59 @@ def post(id):
     """为文章提供固定链接、博客评论"""
     post = Post.query.get_or_404(id)
     if request.method == 'POST':
-        # POST请求需要验证jwt
-        jwt_required()
-        j = request.get_json()
-        comment = Comment(body=j.get('body'), post=post, author=current_user)
-        # 父评论
-        parent_comment_id = j.get('parentCommentId', None)
-        if parent_comment_id:
-            parent_comment = Comment.query.filter_by(id=parent_comment_id).first()
-            comment = Comment(body=j.get('body'), post=post, author=current_user, parent_comment=parent_comment)
-        # 将挂起的更改发送到数据库，但不会提交事务
+        jwt_required()  # POST 请求需要 JWT 验证
+        data = request.get_json()
+
+        # 创建评论对象
+        parent_comment = Comment.query.get(data.get('parentCommentId')) if 'parentCommentId' in data else None
+        comment = Comment(
+            body=data.get('body'),
+            post=post,
+            author=current_user,
+            parent_comment=parent_comment
+        )
         db.session.add(comment)
         db.session.flush()
-        notification_post = Notification(receiver_id=post.author_id, trigger_user_id=comment.author_id, post_id=post.id,
-                                    comment_id=comment.id, type=NotificationType.COMMENT)
-        db.session.add(notification_post)
-        if parent_comment_id:
-            # 建议新的通知实例，通知回复的人
-            notification_reply = Notification(receiver_id=parent_comment.author_id, trigger_user_id=comment.author_id,
-                                              post_id=post.id,
-                                              comment_id=comment.id, type=NotificationType.REPLY)
-            db.session.add(notification_reply)
+
+        # 生成通知列表
+        notifications = []
+        # 作者评论自己文章时不会收到通知
+        if current_user.id != post.author_id:
+            # 用户回复作者时，作者只能受到回复通知，而不会收到评论通知
+            if not parent_comment or (parent_comment and parent_comment.author_id != post.author_id):
+                notifications.append(Notification(
+                    receiver_id=post.author_id,
+                    trigger_user_id=current_user.id,
+                    post_id=post.id,
+                    comment_id=comment.id,
+                    type=NotificationType.COMMENT
+                ))
+
+        # 添加回复通知
+        # 用户回复自己的评论时不产生通知
+        if parent_comment and parent_comment.author_id != current_user.id:
+            notifications.append(
+                Notification(
+                    receiver_id=parent_comment.author_id,
+                    trigger_user_id=current_user.id,
+                    post_id=post.id,
+                    comment_id=comment.id,
+                    type=NotificationType.REPLY
+                )
+            )
+
+        # 批量提交数据库操作
+        db.session.add_all(notifications)
         db.session.commit()
-        socketio.emit('new_notification', notification_post.to_json(), to=str(post.author_id))  # 发送到作者的房间
-        if parent_comment_id:
-            socketio.emit('new_notification', notification_reply.to_json(), to=str(parent_comment.author_id))  # 发送到父评论的房间
+
+        # 实时推送通知
+        for notification in notifications:
+            socketio.emit(
+                'new_notification',
+                notification.to_json(),
+                to=str(notification.receiver_id)
+            )
+
         return redirect(url_for('.post', id=post.id, page=-1))
     page = request.args.get('page', 1, type=int)
     if page == -1:
@@ -244,9 +272,7 @@ def post(id):
         error_out=False)
     comments = [
         {'body': item.body, 'timestamp': DateUtils.datetime_to_str(item.timestamp), 'author': item.author.username,
-         'nick_name': item.author.name,
-         'disabled': item.disabled} for
-        item in pagination.items]
+         'nick_name': item.author.name, 'disabled': item.disabled} for item in pagination.items]
     return jsonify(data=comments, total=post.comments.count(), currentPage=page, msg='success')
 
 
@@ -422,10 +448,12 @@ def get_unread_notification():
     d = Notification.query.filter_by(receiver_id=current_user.id).order_by(Notification.created_at.desc()).all()
     return jsonify(data=[item.to_json() for item in d], msg='success')
 
+
 @main.route('/notification/read', methods=['POST'])
 @jwt_required()
 def mark_read_notification():
-    ids = request.get_json().get('ids',[])
-    Notification.query.filter(Notification.id.in_(ids),Notification.receiver_id == current_user.id).update({'is_read':True}, synchronize_session=False)
+    ids = request.get_json().get('ids', [])
+    Notification.query.filter(Notification.id.in_(ids), Notification.receiver_id == current_user.id).update(
+        {'is_read': True}, synchronize_session=False)
     db.session.commit()
     return jsonify(data='', msg='success')

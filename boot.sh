@@ -13,4 +13,4 @@ while true; do
 done
 
 celery -A app.make_celery worker --loglevel INFO -P eventlet &
-exec gunicorn -b :5000 --access-logfile - --error-logfile - flasky:app
+exec gunicorn -b :5000 --worker-class eventlet -w 1 --access-logfile - --error-logfile - flasky:app
