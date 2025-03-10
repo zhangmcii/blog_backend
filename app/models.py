@@ -389,7 +389,8 @@ class Comment(db.Model):
         json_comment = {
             'id': self.id,
             'author': self.author.username,
-            'image':self.author.image,
+            'nick_name': self.author.name,
+            'image': self.author.image,
             'body': self.body,
             'body_html': self.body_html,
             'disabled': self.disabled,
