@@ -435,12 +435,12 @@ def handle_connect(auth):
             print('断开旧连接：',sid)
             disconnect(sid)
         # 记录连接
+        # 读取不了current_user.username。因为这不是http请求，无法应用jwt_required，所以读取不了current_user对象的属性
         manage_socket.add_user_socket(current_user_id, request.sid)
         # 将用户加入以自身ID命名的房间
         join_room(str(current_user_id))
         u = User.query.get(current_user_id)
         print(f"用户 {u.username} connected to room。新连接：{request.sid}")
-        print('当前在线人数：', len(manage_socket.user_socket.keys()))
 
     except Exception as e:
         print(f"WebSocket connection failed: {str(e)}")
@@ -452,7 +452,6 @@ def handle_connect(auth):
 def handle_disconnect(reason):
     manage_socket.remove_user_socket(request.sid)
     print(f'用户断开了', request.sid)
-    print('当前在线人数：', len(manage_socket.user_socket.keys()))
 
 
 @main.route('/notification/unread')
@@ -470,3 +469,16 @@ def mark_read_notification():
         {'is_read': True}, synchronize_session=False)
     db.session.commit()
     return jsonify(data='', msg='success')
+
+@main.route('/socketData')
+def online():
+    # 在线人数信息
+    user_ids = manage_socket.user_socket.keys()
+    users = []
+    for user_id in user_ids:
+        u = User.query.get(user_id)
+        users.append({'username':u.username, 'nickName':u.name})
+    print(users)
+    online_total = len(users)
+    return jsonify(data=users, msg='success',total=online_total)
+
