@@ -471,6 +471,8 @@ def mark_read_notification():
     return jsonify(data='', msg='success')
 
 @main.route('/socketData')
+@admin_required
+@jwt_required()
 def online():
     # 在线人数信息
     user_ids = manage_socket.user_socket.keys()
