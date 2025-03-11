@@ -110,8 +110,8 @@ class Notification(db.Model):
             'triggerNickName': self.trigger_user.name,
             'triggerUsername': self.trigger_user.username,
             'content': '',
-            'article_id': self.post_id,
-            'comment_id': self.comment_id,
+            'postId': self.post_id,
+            'commentId': self.comment_id,
             'isRead': self.is_read,
 
         }

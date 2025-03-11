@@ -5,13 +5,15 @@ from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
 from ..utils.time_util import DateUtils
+from ..utils.socket_util import ManageSocket
 from flask_sqlalchemy import record_queries
 from ..fake import Fake
 from .. import socketio
+from flask_socketio import disconnect
 from flask_socketio import join_room, ConnectionRefusedError
-
 """编辑资料、博客文章、关注者信息、评论信息"""
 
+manage_socket = ManageSocket()
 
 @main.after_app_request
 def after_request(response):
@@ -426,10 +428,19 @@ def handle_connect(auth):
         # 检查用户是否存在
         if not User.query.get(current_user_id):
             raise ConnectionRefusedError("用户不存在")
+
+        # 断开旧连接
+        old_sids = manage_socket.user_socket.get(current_user_id, set())
+        for sid in old_sids:
+            print('断开旧连接：',sid)
+            disconnect(sid)
+        # 记录连接
+        manage_socket.add_user_socket(current_user_id, request.sid)
         # 将用户加入以自身ID命名的房间
         join_room(str(current_user_id))
         u = User.query.get(current_user_id)
-        print(f"用户 {u.username} connected to room")
+        print(f"用户 {u.username} connected to room。新连接：{request.sid}")
+        print('当前在线人数：', len(manage_socket.user_socket.keys()))
 
     except Exception as e:
         print(f"WebSocket connection failed: {str(e)}")
@@ -438,8 +449,10 @@ def handle_connect(auth):
 
 # 处理WebSocket连接
 @socketio.on('disconnect')
-def handle_connect(reason):
-    print(f'用户断开了', reason)
+def handle_disconnect(reason):
+    manage_socket.remove_user_socket(request.sid)
+    print(f'用户断开了', request.sid)
+    print('当前在线人数：', len(manage_socket.user_socket.keys()))
 
 
 @main.route('/notification/unread')
