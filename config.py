@@ -27,6 +27,10 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_RECORD_QUERIES = True
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 6,
+        'max_overflow': 8
+    }
 
     FLASKY_POSTS_PER_PAGE = 10
     FLASKY_FOLLOWERS_PER_PAGE = 15
