@@ -11,9 +11,11 @@ from ..fake import Fake
 from .. import socketio
 from flask_socketio import disconnect
 from flask_socketio import join_room, ConnectionRefusedError
+
 """编辑资料、博客文章、关注者信息、评论信息"""
 
 manage_socket = ManageSocket()
+
 
 @main.after_app_request
 def after_request(response):
@@ -213,48 +215,51 @@ def post(id):
     if request.method == 'POST':
         jwt_required()  # POST 请求需要 JWT 验证
         data = request.get_json()
-
-        # 创建评论对象
-        parent_comment = Comment.query.get(data.get('parentCommentId')) if 'parentCommentId' in data else None
-        comment = Comment(
-            body=data.get('body'),
-            post=post,
-            author=current_user,
-            parent_comment=parent_comment
-        )
-        db.session.add(comment)
-        db.session.flush()
-
-        # 生成通知列表
-        notifications = []
-        # 作者评论自己文章时不会收到通知
-        if current_user.id != post.author_id:
-            # 用户回复作者时，作者只能受到回复通知，而不会收到评论通知
-            if not parent_comment or (parent_comment and parent_comment.author_id != post.author_id):
-                notifications.append(Notification(
-                    receiver_id=post.author_id,
-                    trigger_user_id=current_user.id,
-                    post_id=post.id,
-                    comment_id=comment.id,
-                    type=NotificationType.COMMENT
-                ))
-
-        # 添加回复通知
-        # 用户回复自己的评论时不产生通知
-        if parent_comment and parent_comment.author_id != current_user.id:
-            notifications.append(
-                Notification(
-                    receiver_id=parent_comment.author_id,
-                    trigger_user_id=current_user.id,
-                    post_id=post.id,
-                    comment_id=comment.id,
-                    type=NotificationType.REPLY
-                )
+        try:
+            # 创建评论对象
+            parent_comment = Comment.query.get(data.get('parentCommentId')) if 'parentCommentId' in data else None
+            comment = Comment(
+                body=data.get('body'),
+                post=post,
+                author=current_user,
+                parent_comment=parent_comment
             )
+            db.session.add(comment)
+            db.session.flush()
 
-        # 批量提交数据库操作
-        db.session.add_all(notifications)
-        db.session.commit()
+            # 生成通知列表
+            notifications = []
+            # 作者评论自己文章时不会收到通知
+            if current_user.id != post.author_id:
+                # 用户回复作者时，作者只能受到回复通知，而不会收到评论通知
+                if not parent_comment or (parent_comment and parent_comment.author_id != post.author_id):
+                    notifications.append(Notification(
+                        receiver_id=post.author_id,
+                        trigger_user_id=current_user.id,
+                        post_id=post.id,
+                        comment_id=comment.id,
+                        type=NotificationType.COMMENT
+                    ))
+
+            # 添加回复通知
+            # 用户回复自己的评论时不产生通知
+            if parent_comment and parent_comment.author_id != current_user.id:
+                notifications.append(
+                    Notification(
+                        receiver_id=parent_comment.author_id,
+                        trigger_user_id=current_user.id,
+                        post_id=post.id,
+                        comment_id=comment.id,
+                        type=NotificationType.REPLY
+                    )
+                )
+
+            # 批量提交数据库操作
+            db.session.add_all(notifications)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(data='', total=0, currentPage=1, msg='fail', detail=str(e)), 500
 
         # 实时推送通知
         for notification in notifications:
@@ -350,17 +355,20 @@ def praise(id):
     if request.method == 'POST':
         praise = Praise(post=post, author=current_user)
         db.session.add(praise)
-
-        # 将挂起的更改发送到数据库，但不会提交事务
-        if current_user.id != post.author_id:
-            db.session.flush()
-            notification = Notification(receiver_id=post.author_id, trigger_user_id=praise.author_id, post_id=post.id,
-                                        comment_id=praise.id, type=NotificationType.LIKE)
-            db.session.add(notification)
-        db.session.commit()
+        try:
+            # 将挂起的更改发送到数据库，但不会提交事务
+            if current_user.id != post.author_id:
+                db.session.flush()
+                notification = Notification(receiver_id=post.author_id, trigger_user_id=praise.author_id,
+                                            post_id=post.id,
+                                            comment_id=praise.id, type=NotificationType.LIKE)
+                db.session.add(notification)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(praise_total=0, msg='fail', detail=f'操作失败，已回滚.{str(e)}'), 500
         if current_user.id != post.author_id:
             socketio.emit('new_notification', notification.to_json(), to=str(post.author_id))  # 发送到作者的房间
-        db.session.commit()
         return jsonify(praise_total=post.praise.count(), has_praised=True, msg='success', detail='')
     return jsonify(praise_toal=post.praise.count(), msg='success', detail='')
 
@@ -431,7 +439,7 @@ def handle_connect(auth):
         # 断开旧连接
         old_sids = manage_socket.user_socket.get(current_user_id, set())
         for sid in old_sids:
-            print('断开旧连接：',sid)
+            print('断开旧连接：', sid)
             disconnect(sid)
         # 记录连接
         # 读取不了current_user.username。因为这不是http请求，无法应用jwt_required，所以读取不了current_user对象的属性
@@ -469,6 +477,7 @@ def mark_read_notification():
     db.session.commit()
     return jsonify(data='', msg='success')
 
+
 @main.route('/socketData')
 @admin_required
 @jwt_required()
@@ -478,8 +487,7 @@ def online():
     users = []
     for user_id in user_ids:
         u = User.query.get(user_id)
-        users.append({'username':u.username, 'nickName':u.name})
+        users.append({'username': u.username, 'nickName': u.name})
     print(users)
     online_total = len(users)
-    return jsonify(data=users, msg='success',total=online_total)
-
+    return jsonify(data=users, msg='success', total=online_total)
