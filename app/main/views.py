@@ -11,6 +11,7 @@ from ..fake import Fake
 from .. import socketio
 from flask_socketio import disconnect
 from flask_socketio import join_room, ConnectionRefusedError
+from .. import redis
 """编辑资料、博客文章、关注者信息、评论信息"""
 
 manage_socket = ManageSocket()
@@ -342,27 +343,37 @@ def add_user_and_post():
     return jsonify(image=image, msg='success')
 
 
-@main.route('/praise/<int:id>', methods=['GET', 'POST'])
-@jwt_required()
-def praise(id):
-    """文章点赞"""
-    post = Post.query.get_or_404(id)
-    if request.method == 'POST':
-        praise = Praise(post=post, author=current_user)
-        db.session.add(praise)
+# @main.route('/praise/<int:id>', methods=['GET', 'POST'])
+# @jwt_required()
+# @DateUtils.record_time
+# def praise(id):
+#     """文章点赞"""
+#     post = Post.query.get_or_404(id)
+#     if request.method == 'POST':
+#         praise = Praise(post=post, author=current_user)
+#         db.session.add(praise)
+#         db.session.commit()
+#     return jsonify(praise_toal=post.praise.count(), msg='success', detail='')
 
-        # 将挂起的更改发送到数据库，但不会提交事务
-        if current_user.id != post.author_id:
-            db.session.flush()
-            notification = Notification(receiver_id=post.author_id, trigger_user_id=praise.author_id, post_id=post.id,
-                                        comment_id=praise.id, type=NotificationType.LIKE)
-            db.session.add(notification)
-        db.session.commit()
-        if current_user.id != post.author_id:
-            socketio.emit('new_notification', notification.to_json(), to=str(post.author_id))  # 发送到作者的房间
-        db.session.commit()
-        return jsonify(praise_total=post.praise.count(), has_praised=True, msg='success', detail='')
-    return jsonify(praise_toal=post.praise.count(), msg='success', detail='')
+
+
+# @main.route('/praise/<int:id>', methods=['GET', 'POST'])
+# @jwt_required()
+# @DateUtils.record_time
+# def praise(id):
+#     """文章点赞"""
+#     post = Post.query.get_or_404(id)
+#     if request.method == 'POST':
+#         praise = {
+#             'user_id': 2,
+#             'content': '222',
+#             'post_id': 44,
+#             'created_at': '2025-3-14 12:00:00'  # 时间戳序列化
+#         }
+#         comment_id = redis.incr('global:comment:id')  # 生成唯一ID
+#         redis_key = f'comment:{1}'
+#         redis.hset(redis_key, mapping=praise)
+#     return jsonify(praise_toal=10, msg='success', detail='')
 
 
 @main.route('/logs', methods=['GET'])
