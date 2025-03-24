@@ -35,4 +35,5 @@ pytz==2024.2
 celery==5.4.0
 eventlet==0.39.0
 flask-socketio==5.5.1
-
+requests==2.32.3
+user-agents==2.2.0
