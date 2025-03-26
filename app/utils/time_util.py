@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
+from functools import wraps
 import time
 import pytz
 
@@ -50,6 +51,7 @@ class DateUtils:
     @staticmethod
     def record_time(func):
         """记录函数执行时间"""
+        @wraps(func)
         def decorate(*args, **kwargs):
             start = time.perf_counter()
             result = func(*args, **kwargs)

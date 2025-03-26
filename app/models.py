@@ -429,15 +429,32 @@ class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
     ip = db.Column(db.String(100))
+    country = db.Column(db.String(50))
+    city = db.Column(db.String(50))
+    # 浏览器
+    browser = db.Column(db.String(50))
+    browser_version = db.Column(db.String(50))
+    # 操作系统
+    os = db.Column(db.String(50))
+    os_version = db.Column(db.String(50))
+    # 设备
+    device = db.Column(db.String(50))
+    # 操作行为
     operate = db.Column(db.String(64))
     operate_time = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
 
     def to_json(self):
+        country = self.country if self.country else ''
+        city = self.city if self.city else ''
         json_log = {
             'id': self.id,
             'username': self.username,
             'ip': self.ip,
+            'addr': country + city,
+            'browser': self.browser,
+            'os': self.os,
+            'device': self.device,
             'operate': self.operate,
-            'operateTime': self.operate_time
+            'operateTime': self.operate_time,
         }
         return json_log
