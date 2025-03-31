@@ -29,6 +29,7 @@ def after_request(response):
 
 # --------------------------- 编辑资料 ---------------------------
 @main.route('/edit-profile', methods=['POST'])
+@jwt_required()
 def edit_peofile():
     user_info = request.get_json()
     current_user.name = user_info.get('name')
@@ -423,6 +424,9 @@ def create_comment():
 @socketio.on('connect')
 @jwt_required(optional=True)
 def handle_connect(auth):
+    """ 注意：这里不是http请求，所以verify_jwt_in_request()函数不能在这里使用。
+        只能采取手动解码来验证token是否有效
+    """
     try:
         # 从Socket.IO连接中获取JWT（通常通过查询参数或头传递）
         token = request.args.get('token')
