@@ -109,6 +109,7 @@ def user(username):
 @main.route('/edit/<int:id>', methods=['GET', 'PUT'])
 @jwt_required()
 def edit(id):
+    # PUT 文章已使用api中的
     """编辑博客文章"""
     post = Post.query.get_or_404(id)
     if current_user.username != post.author.username and not current_user.can(Permission.ADMIN):
