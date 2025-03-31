@@ -29,6 +29,7 @@ def after_request(response):
 
 # --------------------------- 编辑资料 ---------------------------
 @main.route('/edit-profile', methods=['POST'])
+@jwt_required()
 def edit_peofile():
     user_info = request.get_json()
     current_user.name = user_info.get('name')
@@ -109,6 +110,7 @@ def user(username):
 @main.route('/edit/<int:id>', methods=['GET', 'PUT'])
 @jwt_required()
 def edit(id):
+    # PUT 文章已使用api中的
     """编辑博客文章"""
     post = Post.query.get_or_404(id)
     if current_user.username != post.author.username and not current_user.can(Permission.ADMIN):
@@ -361,7 +363,7 @@ def praise(id):
                 db.session.flush()
                 notification = Notification(receiver_id=post.author_id, trigger_user_id=praise.author_id,
                                             post_id=post.id,
-                                            comment_id=praise.id, type=NotificationType.LIKE)
+                                            comment_id=None, type=NotificationType.LIKE)
                 db.session.add(notification)
             db.session.commit()
         except Exception as e:
@@ -422,6 +424,9 @@ def create_comment():
 @socketio.on('connect')
 @jwt_required(optional=True)
 def handle_connect(auth):
+    """ 注意：这里不是http请求，所以verify_jwt_in_request()函数不能在这里使用。
+        只能采取手动解码来验证token是否有效
+    """
     try:
         # 从Socket.IO连接中获取JWT（通常通过查询参数或头传递）
         token = request.args.get('token')

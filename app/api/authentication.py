@@ -1,5 +1,5 @@
 from . import api
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import verify_jwt_in_request
 from flask import request, jsonify
 import re
 
@@ -13,6 +13,6 @@ def auth():
         if re.match(skip_post_pattern, request.path):
             return
         else:
-            jwt_required()
-    except Exception as e:
+            verify_jwt_in_request()
+    except Exception:
         return jsonify({'message': 'Unauthorized'}), 401
