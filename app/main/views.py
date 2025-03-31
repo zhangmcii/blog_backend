@@ -363,7 +363,7 @@ def praise(id):
                 db.session.flush()
                 notification = Notification(receiver_id=post.author_id, trigger_user_id=praise.author_id,
                                             post_id=post.id,
-                                            comment_id=praise.id, type=NotificationType.LIKE)
+                                            comment_id=None, type=NotificationType.LIKE)
                 db.session.add(notification)
             db.session.commit()
         except Exception as e:
