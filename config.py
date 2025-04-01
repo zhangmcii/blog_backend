@@ -34,7 +34,10 @@ class Config:
 
     FLASKY_POSTS_PER_PAGE = 10
     FLASKY_FOLLOWERS_PER_PAGE = 15
+    # 评论分页大小
     FLASKY_COMMENTS_PER_PAGE = 10
+    # 回复评论分页大小
+    FLASKY_COMMENTS_REPLY_PER_PAGE = 5
     FLASKY_LOG_PER_PAGE = 15
 
     FLASKY_SLOW_DB_QUERY_TIME = 0.5
@@ -72,7 +75,7 @@ class ProductionConfig(Config):
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
-                                                                                  '') + ':3306/backend_flask?charset=utf8mb4'
+                                                                                  '') + ':3306/backend_comment_dev?charset=utf8mb4'
     # redis
     REDIS_URL = os.environ.get('REDIS_URL') or "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
                                                                             '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>

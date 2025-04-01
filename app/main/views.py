@@ -212,7 +212,7 @@ def can(perm):
 # get 评论已使用api中的
 @main.route('/post/<int:id>', methods=['GET', 'POST'])
 def post(id):
-    """为文章提供固定链接、博客评论"""
+    """发布和获取博客评论"""
     post = Post.query.get_or_404(id)
     if request.method == 'POST':
         jwt_required()  # POST 请求需要 JWT 验证
@@ -278,10 +278,11 @@ def post(id):
     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
         page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
         error_out=False)
-    comments = [
-        {'body': item.body, 'timestamp': DateUtils.datetime_to_str(item.timestamp), 'author': item.author.username,
-         'nick_name': item.author.name, 'disabled': item.disabled} for item in pagination.items]
-    return jsonify(data=comments, total=post.comments.count(), currentPage=page, msg='success')
+    # comments = [
+    #     {'body': item.body, 'timestamp': DateUtils.datetime_to_str(item.timestamp), 'author': item.author.username,
+    #      'nick_name': item.author.name, 'disabled': item.disabled} for item in pagination.items]
+    # return jsonify(data=comments, total=post.comments.count(), currentPage=page, msg='success')
+    return jsonify(data=[comment.to_json_new() for comment in pagination.items], total=post.comments.count(), currentPage=page, msg='success')
 
 
 @main.route('/moderate')

@@ -371,19 +371,23 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
-    body_html = db.Column(db.Text)
+    # body_html = db.Column(db.Text)
+    # disabled = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
-    disabled = db.Column(db.Boolean)
+    praise_num = db.Column(db.Integer, default=0)
+    disabled = db.Column(db.Boolean, default=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
-    # 子评论
+    # 父评论
     parent_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
     # remote_side设置为多对一
     parent_comment = db.relationship('Comment', back_populates='sub_comment', remote_side=[id])
     # 默认一对多
     sub_comment = db.relationship('Comment', back_populates='parent_comment', cascade='all, delete-orphan')
     notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
+    # 评论点赞
+    praise = db.relationship('Praise', backref='comments', lazy='dynamic')
 
     def to_json(self):
         json_comment = {
@@ -392,7 +396,6 @@ class Comment(db.Model):
             'nick_name': self.author.name,
             'image': self.author.image,
             'body': self.body,
-            'body_html': self.body_html,
             'disabled': self.disabled,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
             'parent_comment_id': self.parent_comment_id
@@ -409,12 +412,29 @@ class Comment(db.Model):
             raise ValidationError('comment does not have a body')
         return Comment(body=body)
 
+    def to_json_new(self):
+        j = {
+            'id': self.id,
+            'parentId': self.parent_comment_id,
+            'uid': self.author.id,
+            'content': self.body,
+            'likes': self.praise_num,
+            'createTime': self.timestamp,
+            'user': {
+                'username': self.author.name,
+                'avatar': self.author.image,
+                'homeLink': f'/user/{self.author.username}',
+            }
+        }
+        return j
+
 
 class Praise(db.Model):
     __tablename__ = 'praise'
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
 
     @staticmethod
     def has_praised(post_id):
