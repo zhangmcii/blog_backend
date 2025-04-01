@@ -212,7 +212,7 @@ def can(perm):
 # get 评论已使用api中的
 @main.route('/post/<int:id>', methods=['GET', 'POST'])
 def post(id):
-    """为文章提供固定链接、博客评论"""
+    """发布和获取博客评论"""
     post = Post.query.get_or_404(id)
     if request.method == 'POST':
         jwt_required()  # POST 请求需要 JWT 验证

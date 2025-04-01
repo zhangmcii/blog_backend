@@ -10,6 +10,7 @@ from . import redis
 from .exceptions import ValidationError
 from enum import Enum
 
+
 class Permission:
     FOLLOW = 1
     COMMENT = 2
@@ -78,10 +79,12 @@ class Follow(db.Model):
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
+
 class NotificationType(Enum):
     COMMENT = '评论'
     REPLY = "回复"
     LIKE = '点赞'
+
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -117,6 +120,7 @@ class Notification(db.Model):
         }
         return data
 
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -149,10 +153,10 @@ class User(db.Model):
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
 
     received_notification = db.relationship('Notification', foreign_keys=[Notification.receiver_id],
-                               backref='receiver', lazy='dynamic')
+                                            backref='receiver', lazy='dynamic')
 
     triggered_notification = db.relationship('Notification', foreign_keys=[Notification.trigger_user_id],
-                                            backref='trigger_user', lazy='dynamic')
+                                             backref='trigger_user', lazy='dynamic')
 
     @property
     def followed_posts(self):
@@ -371,9 +375,9 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
-    body_html = db.Column(db.Text)
+    praise_num = db.Column(db.Integer, default=0)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
-    disabled = db.Column(db.Boolean)
+    disabled = db.Column(db.Boolean, default=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
@@ -408,6 +412,21 @@ class Comment(db.Model):
         if body is None or body == '':
             raise ValidationError('comment does not have a body')
         return Comment(body=body)
+
+    def to_json_new(self):
+        j = {
+            'id': self.id,
+            'parentId': self.parent_comment_id,
+            'uid': self.author.id,
+            'content': self.body,
+            'createTime': self.timestamp,
+            'user': {
+                'username': self.author.name,
+                'avatar': self.author.image,
+                'homeLink': f'/user/{self.author.username}',
+            }
+        }
+        return j
 
 
 class Praise(db.Model):
