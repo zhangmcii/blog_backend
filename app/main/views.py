@@ -169,6 +169,8 @@ def followers(username):
         if item.follower.username != username:
             is_following_back = Follow.query.filter_by(follower=user, followed=item.follower).first() is not None
             follows.append({
+                'id': item.follower.id,
+                'nickname': item.follower.name,
                 'username': item.follower.username,
                 'image': item.follower.image,
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
@@ -192,6 +194,8 @@ def followed_by(username):
         if item.followed.username != username:
             is_following_back = Follow.query.filter_by(follower=item.followed, followed=user).first() is not None
             follows.append({
+                'id': item.followed.id,
+                'nickname':item.followed.name,
                 'username': item.followed.username,
                 'image': item.followed.image,
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
