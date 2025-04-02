@@ -1,6 +1,6 @@
 import os
 
-from flask import request, jsonify
+from flask import request, jsonify, url_for
 from flask_jwt_extended import create_access_token, jwt_required, current_user
 from ..decorators import admin_required
 from . import auth
@@ -8,6 +8,7 @@ from ..models import User
 from .. import db
 from ..mycelery.tasks import send_email
 from ..utils.time_util import DateUtils
+
 
 @auth.before_app_request
 @jwt_required(optional=True)
@@ -18,18 +19,40 @@ def before_request():
         #     return '用户邮件未认证'
 
 
+# @auth.route('/login', methods=['post'])
+# def login():
+#     j = request.get_json()
+#     user = User.query.filter_by(username=j.get('uiAccountName')).one_or_none()
+#     if user:
+#         if user.verify_password(j.get('uiPassword')):
+#             token = create_access_token(identity=user, expires_delta=False)
+#             user.ping()
+#             return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username, name=user.name,
+#                            admin=user.is_administrator(), image=user.image, roleId=user.role_id,
+#                            isConfirmed=user.confirmed), 200
+#     return jsonify(msg="登陆失败")
+
 @auth.route('/login', methods=['post'])
 def login():
     j = request.get_json()
     user = User.query.filter_by(username=j.get('uiAccountName')).one_or_none()
-    if user:
-        if user.verify_password(j.get('uiPassword')):
-            token = create_access_token(identity=user, expires_delta=False)
-            user.ping()
-            return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username, name=user.name,
-                           admin=user.is_administrator(), image=user.image, roleId=user.role_id,
-                           isConfirmed=user.confirmed), 200
-    return jsonify(msg="登陆失败")
+    if user and user.verify_password(j.get('uiPassword')):
+        token = create_access_token(identity=user, expires_delta=False)
+        user.ping()
+        u = {
+            'token': 'Bearer ' + token,
+            'id': user.id,
+            'username': user.username,
+            'nickname': user.name,
+            'admin': user.is_administrator(),
+            'image': user.image,
+            'roleId': user.role_id,
+            'isConfirmed': user.confirmed,
+            'location': user.location,
+            'about_me': user.about_me,
+        }
+        return jsonify(data=u, msg="success", detail=''), 200
+    return jsonify(data='', msg="fail", detail='账号或密码错误')
 
 
 @auth.route('/register', methods=['POST'])
@@ -135,6 +158,7 @@ def reset_password():
         db.session.commit()
         return jsonify(data='', msg='success', detail='')
     return jsonify(data='', msg='fail', detail='验证码错误')
+
 
 @auth.route('/helpChangePassword', methods=['POST'])
 @admin_required

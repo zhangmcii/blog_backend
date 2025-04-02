@@ -1,4 +1,4 @@
-from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token
+from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token, verify_jwt_in_request
 from . import main
 from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType
 from ..decorators import permission_required, admin_required, log_operate
@@ -215,7 +215,8 @@ def post(id):
     """发布和获取博客评论"""
     post = Post.query.get_or_404(id)
     if request.method == 'POST':
-        jwt_required()  # POST 请求需要 JWT 验证
+        # POST 请求需要 JWT 验证
+        verify_jwt_in_request()
         data = request.get_json()
         try:
             # 创建评论对象
@@ -351,11 +352,12 @@ def add_user_and_post():
 
 
 @main.route('/praise/<int:id>', methods=['GET', 'POST'])
-@jwt_required()
 def praise(id):
     """文章点赞"""
     post = Post.query.get_or_404(id)
     if request.method == 'POST':
+        # POST 请求需要 JWT 验证
+        verify_jwt_in_request()
         praise = Praise(post=post, author=current_user)
         db.session.add(praise)
         try:
@@ -375,6 +377,42 @@ def praise(id):
         return jsonify(praise_total=post.praise.count(), has_praised=True, msg='success', detail='')
     return jsonify(praise_toal=post.praise.count(), msg='success', detail='')
 
+
+@main.route('/praise/comment/<int:id>', methods=['GET', 'POST'])
+def praise_comment(id):
+    """文章点赞"""
+    comment = Comment.query.get_or_404(id)
+    if request.method == 'POST':
+        # POST 请求需要 JWT 验证
+        verify_jwt_in_request()
+        praise = Praise(comment=comment, author=current_user)
+        db.session.add(praise)
+        try:
+            # 将挂起的更改发送到数据库，但不会提交事务
+            if current_user.id != comment.author_id:
+                db.session.flush()
+                notification = Notification(receiver_id=comment.author_id, trigger_user_id=praise.author_id,
+                                            post_id=None,
+                                            comment_id=comment.id, type=NotificationType.LIKE)
+                db.session.add(notification)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(praise_total=0, msg='fail', detail=f'点赞操作失败，已回滚.{str(e)}'), 500
+        if current_user.id != comment.author_id:
+            socketio.emit('new_notification', notification.to_json(), to=str(comment.author_id))  # 发送到作者的房间
+        return jsonify(praise_total=comment.praise.count(),  msg='success', detail='')
+    return jsonify(praise_toal=comment.praise.count(), msg='success', detail='')
+
+@main.route('/has_praised/<int:post_id>')
+def has_praised_comment_id(post_id):
+    """查找某文章下当前用户已点赞的评论id"""
+    comment_ids = db.session.query(Praise.comment_id).join(Comment).filter(
+        Praise.author_id == current_user.id,
+        Comment.post_id == post_id,
+        Praise.comment_id.isnot(None)
+    ).distinct().all()
+    return jsonify(data=[item[0] for item in comment_ids], msg='success')
 
 @main.route('/logs', methods=['GET'])
 @admin_required

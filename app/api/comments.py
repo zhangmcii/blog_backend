@@ -1,6 +1,9 @@
 from flask import jsonify, request, g, url_for, current_app
+from flask_jwt_extended import current_user
+from redis.cluster import command
+
 from .. import db
-from ..models import Post, Permission, Comment
+from ..models import Post, Permission, Comment, Praise
 from . import api
 from .decorators import permission_required
 
@@ -59,7 +62,7 @@ def new_post_comment(id):
 @api.route('/posts/<int:id>/comments/')
 def get_comments_new(id):
     post = Post.query.get_or_404(id)
-    page = request.args.get('current', 1, type=int)
+    page = request.args.get('page', 1, type=int)
     per_page = request.args.get('size', current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
 
     # 得到不包含回复的评论
