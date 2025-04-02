@@ -75,7 +75,7 @@ class ProductionConfig(Config):
     # mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'mysql+pymysql://LAPTOP-R3BSJ27E:1234@' + os.getenv('FLASK_RUN_HOST',
-                                                                                  '') + ':3306/backend_flask?charset=utf8mb4'
+                                                                                  '') + ':3306/backend_comment_dev?charset=utf8mb4'
     # redis
     REDIS_URL = os.environ.get('REDIS_URL') or "redis://:1234@" + os.getenv('FLASK_RUN_HOST',
                                                                             '') + ":6379/0"  # 格式：redis://:<password>@<host>:<port>/<db>

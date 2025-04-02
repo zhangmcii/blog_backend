@@ -10,7 +10,6 @@ from . import redis
 from .exceptions import ValidationError
 from enum import Enum
 
-
 class Permission:
     FOLLOW = 1
     COMMENT = 2
@@ -79,12 +78,10 @@ class Follow(db.Model):
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
-
 class NotificationType(Enum):
     COMMENT = '评论'
     REPLY = "回复"
     LIKE = '点赞'
-
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -120,7 +117,6 @@ class Notification(db.Model):
         }
         return data
 
-
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -153,10 +149,10 @@ class User(db.Model):
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
 
     received_notification = db.relationship('Notification', foreign_keys=[Notification.receiver_id],
-                                            backref='receiver', lazy='dynamic')
+                               backref='receiver', lazy='dynamic')
 
     triggered_notification = db.relationship('Notification', foreign_keys=[Notification.trigger_user_id],
-                                             backref='trigger_user', lazy='dynamic')
+                                            backref='trigger_user', lazy='dynamic')
 
     @property
     def followed_posts(self):
@@ -375,19 +371,23 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
-    praise_num = db.Column(db.Integer, default=0)
+    # body_html = db.Column(db.Text)
+    # disabled = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
+    praise_num = db.Column(db.Integer, default=0)
     disabled = db.Column(db.Boolean, default=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
-    # 子评论
+    # 父评论
     parent_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
     # remote_side设置为多对一
     parent_comment = db.relationship('Comment', back_populates='sub_comment', remote_side=[id])
     # 默认一对多
     sub_comment = db.relationship('Comment', back_populates='parent_comment', cascade='all, delete-orphan')
     notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
+    # 评论点赞
+    praise = db.relationship('Praise', backref='comments', lazy='dynamic')
 
     def to_json(self):
         json_comment = {
@@ -396,7 +396,6 @@ class Comment(db.Model):
             'nick_name': self.author.name,
             'image': self.author.image,
             'body': self.body,
-            'body_html': self.body_html,
             'disabled': self.disabled,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
             'parent_comment_id': self.parent_comment_id
@@ -419,6 +418,7 @@ class Comment(db.Model):
             'parentId': self.parent_comment_id,
             'uid': self.author.id,
             'content': self.body,
+            'likes': self.praise_num,
             'createTime': self.timestamp,
             'user': {
                 'username': self.author.name,
@@ -434,6 +434,7 @@ class Praise(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
 
     @staticmethod
     def has_praised(post_id):

@@ -36,11 +36,11 @@ def get_comment(id):
 # def get_post_comments(id):
 #     post = Post.query.get_or_404(id)
 #     page = request.args.get('page', 1, type=int)
-#     per_page = request.args.get('per_page', current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
+#     per_page = request.args.get('per_page',current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
 #     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
 #         page=page, per_page=per_page, error_out=False)
 #     comments = pagination.items
-#     return jsonify(data=[comment.to_json() for comment in comments], total=pagination.total, msg='success')
+#     return jsonify(data=[comment.to_json() for comment in comments],total=pagination.total,msg='success')
 
 
 @api.route('/posts/<int:id>/comments/', methods=['POST'])
@@ -72,8 +72,8 @@ def get_comments_new(id):
         # 根据comment_id得到该评论的点赞数
         # ----
         r = comment.to_json_new()
-        reply = get_reply_comment_by_id(comment_id, 1)
-        r.update({'reply': {'total': len(reply),'list':reply}})
+        reply, reply_total = get_reply_comment_by_id(comment_id, 1)
+        r.update({'reply': {'total': reply_total, 'list': reply}})
         result.append(r)
     print('11', result)
     return jsonify(data=result, total=pagination.total, msg='success')
@@ -81,13 +81,23 @@ def get_comments_new(id):
 
 def get_reply_comment_by_id(parent_id, page):
     # 得到某个评论的所有回复评论
-    pagination = Comment.query.filter_by(parent_comment_id=parent_id).order_by(
-        Comment.timestamp.desc()).paginate(
-        page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'], error_out=False)
+    query = Comment.query.filter_by(parent_comment_id=parent_id).order_by(Comment.timestamp.desc())
+    pagination = query.paginate(
+        page=page, per_page=current_app.config['FLASKY_COMMENTS_REPLY_PER_PAGE'], error_out=False)
     reply_comments = pagination.items
     for reply_comment in reply_comments:
         reply_comment_id = reply_comment.id
         # 根据reply_comment_id得到该评论的点赞数
         # ----
         pass
-    return [comment.to_json_new() for comment in reply_comments]
+    return [comment.to_json_new() for comment in reply_comments], query.count()
+
+
+@api.route('/reply_comments/')
+def get_reply_comment():
+    parent_id = request.args.get('parentId', type=int)
+    page = request.args.get('page', type=int)
+    print('parentId', parent_id)
+    print('page', page)
+    reply, total = get_reply_comment_by_id(parent_id, page)
+    return jsonify(data=reply, total=total, msg='success')
