@@ -10,6 +10,7 @@ from . import redis
 from .exceptions import ValidationError
 from enum import Enum
 
+
 class Permission:
     FOLLOW = 1
     COMMENT = 2
@@ -78,10 +79,12 @@ class Follow(db.Model):
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
+
 class NotificationType(Enum):
     COMMENT = '评论'
     REPLY = "回复"
     LIKE = '点赞'
+
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -117,6 +120,7 @@ class Notification(db.Model):
         }
         return data
 
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -149,10 +153,10 @@ class User(db.Model):
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
 
     received_notification = db.relationship('Notification', foreign_keys=[Notification.receiver_id],
-                               backref='receiver', lazy='dynamic')
+                                            backref='receiver', lazy='dynamic')
 
     triggered_notification = db.relationship('Notification', foreign_keys=[Notification.trigger_user_id],
-                                            backref='trigger_user', lazy='dynamic')
+                                             backref='trigger_user', lazy='dynamic')
 
     @property
     def followed_posts(self):
@@ -278,6 +282,9 @@ class User(db.Model):
                 db.session.commit()
 
     def to_json(self, user):
+        post_praises = Praise.query.join(Post).filter(Post.author_id == self.id).count()
+        comment_praises = Praise.query.join(Comment).filter(Comment.author_id == self.id).count()
+        total_praises = post_praises + comment_praises
         json_user = {
             'url': url_for('api.get_user', id=self.id),
             'id': self.id,
@@ -298,8 +305,12 @@ class User(db.Model):
             'followed_posts_url': url_for('api.get_user_followed_posts',
                                           id=self.id),
             'post_count': self.posts.count(),
+            # 粉丝
             'followers_count': self.followers.count() - 1,
+            # 关注
             'followed_count': self.followed.count() - 1,
+            # 获赞数量(文章+评论获赞)
+            'praised_count': total_praises,
             # 是否被当前用户关注
             'is_followed_by_current_user': self.is_followed_by(current_user) if current_user else self.is_followed_by(
                 user),
@@ -374,7 +385,7 @@ class Comment(db.Model):
     # body_html = db.Column(db.Text)
     # disabled = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
-    praise_num = db.Column(db.Integer, default=0)
+    # praise_num = db.Column(db.Integer, default=0)
     disabled = db.Column(db.Boolean, default=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
@@ -387,7 +398,7 @@ class Comment(db.Model):
     sub_comment = db.relationship('Comment', back_populates='parent_comment', cascade='all, delete-orphan')
     notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
     # 评论点赞
-    praise = db.relationship('Praise', backref='comments', lazy='dynamic')
+    praise = db.relationship('Praise', backref='comment', lazy='dynamic')
 
     def to_json(self):
         json_comment = {
@@ -418,11 +429,12 @@ class Comment(db.Model):
             'parentId': self.parent_comment_id,
             'uid': self.author.id,
             'content': self.body,
-            'likes': self.praise_num,
-            'createTime': self.timestamp,
+            'likes': self.praise.count(),
+            'createTime':  DateUtils.datetime_to_str(self.timestamp),
             'user': {
-                'username': self.author.name,
+                'username': self.author.name if self.author.name else self.author.username,
                 'avatar': self.author.image,
+                # 'address': self.author.location,
                 'homeLink': f'/user/{self.author.username}',
             }
         }
