@@ -8,6 +8,7 @@ from ..models import User
 from .. import db
 from ..mycelery.tasks import send_email
 from ..utils.time_util import DateUtils
+from ..models import Follow
 
 
 @auth.before_app_request
@@ -50,6 +51,13 @@ def login():
             'isConfirmed': user.confirmed,
             'location': user.location,
             'about_me': user.about_me,
+            'likeIds': [praise.comment_id for praise in user.praises if praise is not None],
+            'followed': [{'id': item.followed.id,
+                          'uName':item.followed.username,
+                          'name': item.followed.name if item.followed.name else item.followed.username,
+                          'avatar': item.followed.image} for item in
+                         user.followed.order_by(Follow.timestamp.desc()).all() if
+                         item.followed.username != user.username],
         }
         return jsonify(data=u, msg="success", detail=''), 200
     return jsonify(data='', msg="fail", detail='账号或密码错误')
