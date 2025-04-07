@@ -72,13 +72,10 @@ def get_comments_new(id):
     result = []
     for comment in comments:
         comment_id = comment.id
-        # 根据comment_id得到该评论的点赞数
-        # ----
         r = comment.to_json_new()
         reply, reply_total = get_reply_comment_by_id(comment_id, 1)
         r.update({'reply': {'total': reply_total, 'list': reply}})
         result.append(r)
-    print('11', result)
     return jsonify(data=result, total=pagination.total, msg='success')
 
 
@@ -88,11 +85,6 @@ def get_reply_comment_by_id(parent_id, page):
     pagination = query.paginate(
         page=page, per_page=current_app.config['FLASKY_COMMENTS_REPLY_PER_PAGE'], error_out=False)
     reply_comments = pagination.items
-    for reply_comment in reply_comments:
-        reply_comment_id = reply_comment.id
-        # 根据reply_comment_id得到该评论的点赞数
-        # ----
-        pass
     return [comment.to_json_new() for comment in reply_comments], query.count()
 
 
