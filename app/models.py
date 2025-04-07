@@ -428,7 +428,7 @@ class Comment(db.Model):
             'id': self.id,
             'parentId': self.parent_comment_id,
             'uid': self.author.id,
-            'content': self.body,
+            'content': self.body if not self.disabled else '<p><i>此评论已被版主禁用</i></p>',
             'likes': self.praise.count(),
             'createTime':  DateUtils.datetime_to_str(self.timestamp),
             'user': {
