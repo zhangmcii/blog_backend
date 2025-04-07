@@ -1,6 +1,6 @@
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token, verify_jwt_in_request
 from . import main
-from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType
+from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType, Message
 from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -195,7 +195,7 @@ def followed_by(username):
             is_following_back = Follow.query.filter_by(follower=item.followed, followed=user).first() is not None
             follows.append({
                 'id': item.followed.id,
-                'nickname':item.followed.name,
+                'nickname': item.followed.name,
                 'username': item.followed.username,
                 'image': item.followed.image,
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
@@ -287,7 +287,8 @@ def post(id):
     #     {'body': item.body, 'timestamp': DateUtils.datetime_to_str(item.timestamp), 'author': item.author.username,
     #      'nick_name': item.author.name, 'disabled': item.disabled} for item in pagination.items]
     # return jsonify(data=comments, total=post.comments.count(), currentPage=page, msg='success')
-    return jsonify(data=[comment.to_json_new() for comment in pagination.items], total=post.comments.count(), currentPage=page, msg='success')
+    return jsonify(data=[comment.to_json_new() for comment in pagination.items], total=post.comments.count(),
+                   currentPage=page, msg='success')
 
 
 @main.route('/moderate')
@@ -405,8 +406,9 @@ def praise_comment(id):
             return jsonify(praise_total=0, msg='fail', detail=f'点赞操作失败，已回滚.{str(e)}'), 500
         if current_user.id != comment.author_id:
             socketio.emit('new_notification', notification.to_json(), to=str(comment.author_id))  # 发送到作者的房间
-        return jsonify(praise_total=comment.praise.count(),  msg='success', detail='')
+        return jsonify(praise_total=comment.praise.count(), msg='success', detail='')
     return jsonify(praise_toal=comment.praise.count(), msg='success', detail='')
+
 
 @main.route('/has_praised/<int:post_id>')
 def has_praised_comment_id(post_id):
@@ -417,6 +419,7 @@ def has_praised_comment_id(post_id):
         Praise.comment_id.isnot(None)
     ).distinct().all()
     return jsonify(data=[item[0] for item in comment_ids], msg='success')
+
 
 @main.route('/logs', methods=['GET'])
 @admin_required
@@ -539,3 +542,46 @@ def online():
     print(users)
     online_total = len(users)
     return jsonify(data=users, msg='success', total=online_total)
+
+
+@main.route('/msg', methods=['POST'])
+@jwt_required()
+def send_msg():
+    j = request.get_json()
+    user_id = j.get('userId')
+    content = j.get('content')
+    u = User.query.filter_by(id=user_id).first()
+    current_user.send_msg(u, content)
+    db.session.commit()
+    return jsonify(data='', msg='success', detail='')
+
+
+@main.route('/msg', methods=['GET'])
+@jwt_required()
+def get_message_history():
+    current_user_id = current_user.id
+    other_user_id = request.args.get('userId')
+    messages = Message.query.filter(
+        ((Message.sender_id == current_user_id) & (Message.receiver_id == other_user_id)) |
+        ((Message.sender_id == other_user_id) & (Message.receiver_id == current_user_id))
+    ).order_by(Message.timestamp.desc()).limit(100).all()
+    r = []
+    _id = len(messages)
+    for message in messages:
+        r1 = message.to_json()
+        r1.update({'id': _id})
+        r.append(r1)
+        _id -= 1
+    return jsonify(data=r, msg='success', detail='')
+
+
+@main.route('/msg/read', methods=['POST'])
+@jwt_required()
+def mark_messages_read():
+    message_ids = request.json.get('ids', [])
+    Message.query.filter(
+        Message.id.in_(message_ids),
+        Message.receiver_id == current_user.id()
+    ).update({'is_read': True}, synchronize_session=False)
+    db.session.commit()
+    return jsonify(data='', msg='success', detail='')

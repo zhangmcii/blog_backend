@@ -75,7 +75,10 @@ class Role(db.Model):
 
 class Follow(db.Model):
     __tablename__ = 'follows'
+    # 同时设置follower_id，followed_id为主键，保证同一对用户只能存在一条关系
+    # 关注者id
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    # 被关注者id
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
@@ -143,10 +146,11 @@ class User(db.Model):
 
     praises = db.relationship('Praise', backref='author', lazy='dynamic')
 
-    # 关注
+    # 关注者
     followed = db.relationship('Follow', foreign_keys=[Follow.follower_id],
                                backref=db.backref('follower', lazy='joined'), lazy='dynamic',
                                cascade='all, delete-orphan')
+    # 被关注者
     followers = db.relationship('Follow', foreign_keys=[Follow.followed_id],
                                 backref=db.backref('followed', lazy='joined'), lazy='dynamic',
                                 cascade='all, delete-orphan')
@@ -157,6 +161,12 @@ class User(db.Model):
 
     triggered_notification = db.relationship('Notification', foreign_keys=[Notification.trigger_user_id],
                                              backref='trigger_user', lazy='dynamic')
+
+    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id',
+                                    backref=db.backref('sender', lazy='joined'), lazy='dynamic')
+
+    received_messages = db.relationship('Message', foreign_keys='Message.receiver_id',
+                                        backref=db.backref('receiver', lazy='joined'), lazy='dynamic')
 
     @property
     def followed_posts(self):
@@ -280,6 +290,10 @@ class User(db.Model):
                 user.follow(user)
                 db.session.add(user)
                 db.session.commit()
+
+    def send_msg(self, user, content):
+        m = Message(sender=self, receiver=user, content=content)
+        db.session.add(m)
 
     def to_json(self, user):
         post_praises = Praise.query.join(Post).filter(Post.author_id == self.id).count()
@@ -430,7 +444,7 @@ class Comment(db.Model):
             'uid': self.author.id,
             'content': self.body if not self.disabled else '<p><i>此评论已被版主禁用</i></p>',
             'likes': self.praise.count(),
-            'createTime':  DateUtils.datetime_to_str(self.timestamp),
+            'createTime': DateUtils.datetime_to_str(self.timestamp),
             'user': {
                 'username': self.author.name if self.author.name else self.author.username,
                 'avatar': self.author.image,
@@ -490,3 +504,35 @@ class Log(db.Model):
             'operateTime': self.operate_time,
         }
         return json_log
+
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    content = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
+    is_read = db.Column(db.Boolean, default=False)
+
+    def to_json(self):
+        # j = {
+        #     'id': self.id,
+        #     'sender_id': self.sender_id,
+        #     'content': self.content,
+        #     'timestamp': DateUtils.datetime_to_str(self.timestamp),
+        #     'is_read': self.is_read
+        # }
+        j = {
+            'content': self.content,
+            'uid': self.sender_id,
+            'user': {
+                'username': self.sender.name if self.sender.name else self.sender.username,
+                'avatar': self.sender.image,
+            },
+            'createTime': DateUtils.datetime_to_str(self.timestamp),
+
+            'sender_id': self.sender_id,
+            'is_read': self.is_read,
+        }
+        return j
