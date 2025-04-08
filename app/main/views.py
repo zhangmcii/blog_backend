@@ -561,10 +561,15 @@ def send_msg():
 def get_message_history():
     current_user_id = current_user.id
     other_user_id = request.args.get('userId')
-    messages = Message.query.filter(
+    page = request.args.get('page', 1, type=int)
+    print('page:', page)
+    query = Message.query.filter(
         ((Message.sender_id == current_user_id) & (Message.receiver_id == other_user_id)) |
         ((Message.sender_id == other_user_id) & (Message.receiver_id == current_user_id))
-    ).order_by(Message.timestamp.desc()).limit(100).all()
+    ).order_by(Message.timestamp.desc())
+    pagination = query.paginate(
+        page=page, per_page=current_app.config['FLASKY_CHAT_PER_PAGE'], error_out=False)
+    messages = pagination.items
     r = []
     _id = len(messages)
     for message in messages:
@@ -572,7 +577,7 @@ def get_message_history():
         r1.update({'id': _id})
         r.append(r1)
         _id -= 1
-    return jsonify(data=r, msg='success', detail='')
+    return jsonify(data=r, msg='success', total=pagination.total, detail='')
 
 
 @main.route('/msg/read', methods=['POST'])
