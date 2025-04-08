@@ -39,6 +39,8 @@ class Config:
     # 回复评论分页大小
     FLASKY_COMMENTS_REPLY_PER_PAGE = 5
     FLASKY_LOG_PER_PAGE = 15
+    # 聊天记录分页大小
+    FLASKY_CHAT_PER_PAGE = 15
 
     FLASKY_SLOW_DB_QUERY_TIME = 0.5
 

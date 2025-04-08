@@ -303,7 +303,7 @@ class User(db.Model):
             'url': url_for('api.get_user', id=self.id),
             'id': self.id,
             'username': self.username,
-            'name': self.name,
+            'nickname': self.name,
             'location': self.location,
             'about_me': self.about_me,
             'member_since': DateUtils.datetime_to_str(self.member_since),
