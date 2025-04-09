@@ -87,6 +87,7 @@ class NotificationType(Enum):
     COMMENT = '评论'
     REPLY = "回复"
     LIKE = '点赞'
+    Chat = '私信'
 
 
 class Notification(db.Model):
