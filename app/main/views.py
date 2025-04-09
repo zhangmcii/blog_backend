@@ -516,7 +516,23 @@ def handle_disconnect(reason):
 @jwt_required()
 def get_unread_notification():
     d = Notification.query.filter_by(receiver_id=current_user.id).order_by(Notification.created_at.desc()).all()
-    return jsonify(data=[item.to_json() for item in d], msg='success')
+    return jsonify(data=classification([item.to_json() for item in d]), msg='success')
+
+
+def classification(notification: list) -> dict:
+    at, comment, praise, chat = [], [], [], []
+    for item in notification:
+        if item.get('type') == '评论':
+            comment.append(item)
+        elif item.get('type') == '回复':
+            comment.append(item)
+        elif item.get('type') == '聊天':
+            chat.append(item)
+        elif item.get('type') == '@':
+            at.append(item)
+        elif item.get('type') == '点赞':
+            praise.append(item)
+    return {"at": at, "comment": comment, "praise": praise, "chat": chat}
 
 
 @main.route('/notification/read', methods=['POST'])
