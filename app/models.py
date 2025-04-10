@@ -1,5 +1,6 @@
 from datetime import timedelta
 from flask import current_app, url_for
+from sqlalchemy.orm import foreign
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from . import jwt
@@ -397,20 +398,22 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
-    # body_html = db.Column(db.Text)
-    # disabled = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
-    # praise_num = db.Column(db.Integer, default=0)
     disabled = db.Column(db.Boolean, default=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
     # 父评论
     parent_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
-    # remote_side设置为多对一
-    parent_comment = db.relationship('Comment', back_populates='sub_comment', remote_side=[id])
-    # 默认一对多
-    sub_comment = db.relationship('Comment', back_populates='parent_comment', cascade='all, delete-orphan')
+    direct_parent_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    # 根评论
+    parent_comment = db.relationship('Comment', remote_side=[id], foreign_keys=[parent_comment_id])
+
+    # 直接父评论
+    direct_parent = db.relationship('Comment', remote_side=[id], foreign_keys=[direct_parent_id], back_populates='direct_children')
+    direct_children = db.relationship('Comment', back_populates='direct_parent', cascade='all, delete-orphan')
+
+
     notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
     # 评论点赞
     praise = db.relationship('Praise', backref='comment', lazy='dynamic')
