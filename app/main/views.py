@@ -214,148 +214,45 @@ def can(perm):
 
 # --------------------------- 评论 ---------------------------
 # get 评论已使用api中的
-# @main.route('/post/<int:id>', methods=['GET', 'POST'])
-# def post(id):
-#     """发布和获取博客评论"""
-#     post = Post.query.get_or_404(id)
-#     if request.method == 'POST':
-#         # POST 请求需要 JWT 验证
-#         verify_jwt_in_request()
-#         data = request.get_json()
-#         try:
-#             # 创建评论对象
-#             parent_comment = Comment.query.get(data.get('parentCommentId')) if 'parentCommentId' in data else None
-#             comment = Comment(
-#                 body=data.get('body'),
-#                 post=post,
-#                 author=current_user,
-#                 parent_comment=parent_comment
-#             )
-#             db.session.add(comment)
-#             db.session.flush()
-#
-#             # 生成通知列表
-#             notifications = []
-#             # 作者评论自己文章时不会收到通知
-#             if current_user.id != post.author_id:
-#                 # 用户回复作者时，作者只能受到回复通知，而不会收到评论通知
-#                 if not parent_comment or (parent_comment and parent_comment.author_id != post.author_id):
-#                     notifications.append(Notification(
-#                         receiver_id=post.author_id,
-#                         trigger_user_id=current_user.id,
-#                         post_id=post.id,
-#                         comment_id=comment.id,
-#                         type=NotificationType.COMMENT
-#                     ))
-#
-#             # 添加回复通知
-#             # 用户回复自己的评论时不产生通知
-#             if parent_comment and parent_comment.author_id != current_user.id:
-#                 notifications.append(
-#                     Notification(
-#                         receiver_id=parent_comment.author_id,
-#                         trigger_user_id=current_user.id,
-#                         post_id=post.id,
-#                         comment_id=comment.id,
-#                         type=NotificationType.REPLY
-#                     )
-#                 )
-#
-#             # 批量提交数据库操作
-#             db.session.add_all(notifications)
-#             db.session.commit()
-#         except Exception as e:
-#             db.session.rollback()
-#             return jsonify(data='', total=0, currentPage=1, msg='fail', detail=str(e)), 500
-#
-#         # 实时推送通知
-#         for notification in notifications:
-#             socketio.emit(
-#                 'new_notification',
-#                 notification.to_json(),
-#                 to=str(notification.receiver_id)
-#             )
-#
-#         return redirect(url_for('.post', id=post.id, page=-1))
-#     page = request.args.get('page', 1, type=int)
-#     if page == -1:
-#         page = (post.comments.count() - 1) // current_app.config['FLASKY_COMMENTS_PER_PAGE'] + 1
-#     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
-#         page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
-#         error_out=False)
-#     # comments = [
-#     #     {'body': item.body, 'timestamp': DateUtils.datetime_to_str(item.timestamp), 'author': item.author.username,
-#     #      'nick_name': item.author.name, 'disabled': item.disabled} for item in pagination.items]
-#     # return jsonify(data=comments, total=post.comments.count(), currentPage=page, msg='success')
-#     return jsonify(data=[comment.to_json_new() for comment in pagination.items], total=post.comments.count(),
-#                    currentPage=page, msg='success')
-
 @main.route('/post/<int:id>', methods=['GET', 'POST'])
 def post(id):
     """发布和获取博客评论（适配direct_parent关系）"""
     post = Post.query.get_or_404(id)
-
     if request.method == 'POST':
-        verify_jwt_in_request()  # JWT验证
+        verify_jwt_in_request()
         data = request.get_json()
-
+        # 直接父id
+        parent_comment_id = data.get('parentCommentId')
         try:
-            # 获取直接父评论和根评论（关键修改点）
             direct_parent = None
             root_comment = None
 
-            if 'parentCommentId' in data:
-                # 查询直接父评论
-                direct_parent = Comment.query.get(data['parentCommentId'])
+            # 若是根评论，  则direct_parent=root_commentNone = None
+            # 若是一级回复，则direct_parent=root_commentNone = 根评论对象
+            # 若是其他回复，则direct_parent = 直接评论对象， root_commentNone = 根评论对象
+            if parent_comment_id:
+                # 直接父id
+                direct_parent = Comment.query.get(parent_comment_id)
                 # 获取根评论：如果父评论本身有根评论则继承，否则父评论就是根评论
                 root_comment = direct_parent.parent_comment if direct_parent.parent_comment_id else direct_parent
 
+            print('direct_parent', direct_parent)
+            print('root_comment', root_comment)
             # 创建评论（设置两个父级关系）
             comment = Comment(
                 body=data.get('body'),
                 post=post,
                 author=current_user,
-                direct_parent=direct_parent,  # 新增的直接父评论
-                parent_comment=root_comment  # 维护根评论链
+                direct_parent=direct_parent,
+                parent_comment=root_comment
             )
             db.session.add(comment)
-            db.session.flush()  # 生成comment.id用于通知
-
-            # ================= 通知逻辑重构 =================
-            notifications = []
-
-            # 规则1：文章作者通知（排除自己评论的情况）
-            if current_user != post.author:
-                # 当满足以下条件时通知文章作者：
-                # a. 这是根评论，或者
-                # b. 这是对其他人评论的回复（非作者回复作者）
-                is_root_comment = not direct_parent
-                is_reply_to_others = direct_parent and direct_parent.author != post.author
-
-                if is_root_comment or is_reply_to_others:
-                    notifications.append(Notification(
-                        receiver_id=post.author.id,
-                        trigger_user_id=current_user.id,
-                        post_id=post.id,
-                        comment_id=comment.id,
-                        type=NotificationType.COMMENT  # 文章评论通知
-                    ))
-
-            # 规则2：直接父评论作者通知（排除自己回复自己）
-            if direct_parent and direct_parent.author != current_user:
-                notifications.append(Notification(
-                    receiver_id=direct_parent.author.id,
-                    trigger_user_id=current_user.id,
-                    post_id=post.id,
-                    comment_id=comment.id,
-                    type=NotificationType.REPLY  # 回复通知
-                ))
-
-            # ================= 数据库提交 =================
+            db.session.flush()
+            # 通知
+            notifications = notice_by_comment_type(direct_parent, root_comment, post, comment)
             db.session.add_all(notifications)
             db.session.commit()
-
-            # 实时推送（保持原逻辑）
+            # 实时推送
             for notification in notifications:
                 socketio.emit(
                     'new_notification',
@@ -376,12 +273,75 @@ def post(id):
     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
         page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
         error_out=False)
-    return jsonify(
-        data=[comment.to_json_new() for comment in pagination.items],
-        total=post.comments.count(),
-        currentPage=page,
-        msg='success'
-    )
+    return jsonify(data=[comment.to_json_new() for comment in pagination.items], total=post.comments.count(),
+                   currentPage=page, msg='success')
+
+
+def notice_by_comment_type(direct_parent, root_comment, post, comment):
+    notifications = []
+    # 根评论
+    if not direct_parent and not root_comment:
+        if current_user.id != post.author_id:
+            notifications.append(Notification(
+                receiver_id=post.author_id,
+                trigger_user_id=current_user.id,
+                post_id=post.id,
+                comment_id=comment.id,
+                type=NotificationType.COMMENT  # 文章评论通知
+            ))
+            print('根评论通知')
+    # 一级回复
+    elif direct_parent and direct_parent is root_comment:
+        if current_user.id != post.author_id:
+            notifications.append(Notification(
+                receiver_id=post.author_id,
+                trigger_user_id=current_user.id,
+                post_id=post.id,
+                comment_id=comment.id,
+                type=NotificationType.COMMENT  # 文章评论通知
+            ))
+            print('一级回复 通知作者')
+        if current_user.id != root_comment.author_id:
+            notifications.append(Notification(
+                receiver_id=root_comment.author_id,
+                trigger_user_id=current_user.id,
+                post_id=post.id,
+                comment_id=comment.id,
+                type=NotificationType.REPLY  # 回复通知
+            ))
+            print('一级回复 通知根评论用户')
+    # 其他回复
+    elif direct_parent.id != root_comment.id:
+        if current_user.id != post.author_id:
+            notifications.append(Notification(
+                receiver_id=post.author_id,
+                trigger_user_id=current_user.id,
+                post_id=post.id,
+                comment_id=comment.id,
+                type=NotificationType.COMMENT  # 文章评论通知
+            ))
+            print('其他回复 通知作者')
+        if current_user.id != root_comment.author_id:
+            notifications.append(Notification(
+                receiver_id=root_comment.author_id,
+                trigger_user_id=current_user.id,
+                post_id=post.id,
+                comment_id=comment.id,
+                type=NotificationType.REPLY  # 回复通知
+            ))
+            print('其他回复 通知根评论用户')
+        if current_user.id != direct_parent.author_id:
+            notifications.append(Notification(
+                receiver_id=direct_parent.author_id,
+                trigger_user_id=current_user.id,
+                post_id=post.id,
+                comment_id=comment.id,
+                type=NotificationType.REPLY  # 回复通知
+            ))
+            print('其他回复 通知其他回复用户')
+
+    return notifications
+
 
 @main.route('/moderate')
 @jwt_required()

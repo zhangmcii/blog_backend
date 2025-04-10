@@ -411,7 +411,7 @@ class Comment(db.Model):
 
     # 直接父评论
     direct_parent = db.relationship('Comment', remote_side=[id], foreign_keys=[direct_parent_id], back_populates='direct_children')
-    direct_children = db.relationship('Comment', back_populates='direct_parent', cascade='all, delete-orphan')
+    direct_children = db.relationship('Comment', back_populates='direct_parent', foreign_keys=[direct_parent_id], cascade='all, delete-orphan')
 
 
     notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
@@ -445,6 +445,7 @@ class Comment(db.Model):
         j = {
             'id': self.id,
             'parentId': self.parent_comment_id,
+            'directParentId': self.direct_parent_id,
             'uid': self.author.id,
             'content': self.body if not self.disabled else '<p><i>此评论已被版主禁用</i></p>',
             'likes': self.praise.count(),
