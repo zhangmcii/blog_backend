@@ -402,17 +402,18 @@ class Comment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
-    # 父评论
+    # 根评论id
     root_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    # 直接父评论id
     direct_parent_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
     # 根评论
-    parent_comment = db.relationship('Comment', remote_side=[id], foreign_keys=[root_comment_id])
+    root_comment = db.relationship('Comment', remote_side=[id], foreign_keys=[root_comment_id])
 
     # 直接父评论
     direct_parent = db.relationship('Comment', remote_side=[id], foreign_keys=[direct_parent_id], back_populates='direct_children')
     direct_children = db.relationship('Comment', back_populates='direct_parent', foreign_keys=[direct_parent_id], cascade='all, delete-orphan')
 
-
+    # 通知
     notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
     # 评论点赞
     praise = db.relationship('Praise', backref='comment', lazy='dynamic')

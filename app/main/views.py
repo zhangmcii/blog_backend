@@ -234,7 +234,7 @@ def post(id):
                 # 直接父id
                 direct_parent = Comment.query.get(direct_parent_id)
                 # 获取根评论：如果父评论本身有根评论则继承，否则父评论就是根评论
-                root_comment = direct_parent.parent_comment if direct_parent.root_comment_id else direct_parent
+                root_comment = direct_parent.root_comment if direct_parent.root_comment_id else direct_parent
 
             print('direct_parent', direct_parent)
             print('root_comment', root_comment)
@@ -244,7 +244,7 @@ def post(id):
                 post=post,
                 author=current_user,
                 direct_parent=direct_parent,
-                parent_comment=root_comment
+                root_comment=root_comment
             )
             db.session.add(comment)
             db.session.flush()
