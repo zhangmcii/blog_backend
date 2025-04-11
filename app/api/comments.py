@@ -66,7 +66,7 @@ def get_comments_new(id):
     per_page = request.args.get('size', current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
 
     # 获取根评论分页（parent_comment_id为None）
-    root_comments_pagination = post.comments.filter(Comment.parent_comment_id.is_(None)).order_by(
+    root_comments_pagination = post.comments.filter(Comment.root_comment_id.is_(None)).order_by(
         Comment.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
     comments = []
@@ -88,11 +88,10 @@ def get_comments_new(id):
 def get_replies_by_parent(root_comment_id, page):
     """
     获取指定父评论的所有直接回复
-    :param root_comment_id: 根父评论ID（对应direct_parent_id）
-    :param include_nested: 是否包含嵌套回复（当需要无限层级时使用递归）
+    :param root_comment_id: 根父评论ID
     """
     # 基础查询：直接回复
-    query = Comment.query.filter_by(parent_comment_id=root_comment_id).order_by(Comment.timestamp.desc())
+    query = Comment.query.filter_by(root_comment_id=root_comment_id).order_by(Comment.timestamp.desc())
     # 分页查询
     pagination = query.paginate(page=page, per_page=current_app.config['FLASKY_COMMENTS_REPLY_PER_PAGE'],
                                 error_out=False)
@@ -107,9 +106,9 @@ def get_replies_by_parent(root_comment_id, page):
 @api.route('/reply_comments/')
 def get_comment_replies():
     """获取指定评论的回复分页（支持无限层级嵌套）"""
-    parent_id = request.args.get('parentId', type=int)
+    root_comment_id = request.args.get('rootCommentId', type=int)
     page = request.args.get('page', 1, type=int)
     # 分页时不自动嵌套，前端按需请求
-    replies, total = get_replies_by_parent(parent_id=parent_id, page=page)
+    replies, total = get_replies_by_parent(root_comment_id=root_comment_id, page=page)
 
     return jsonify(data=replies, total=total, current_page=page, msg='success')

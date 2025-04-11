@@ -222,7 +222,7 @@ def post(id):
         verify_jwt_in_request()
         data = request.get_json()
         # 直接父id
-        parent_comment_id = data.get('parentCommentId')
+        direct_parent_id = data.get('directParentId')
         try:
             direct_parent = None
             root_comment = None
@@ -230,11 +230,11 @@ def post(id):
             # 若是根评论，  则direct_parent=root_commentNone = None
             # 若是一级回复，则direct_parent=root_commentNone = 根评论对象
             # 若是其他回复，则direct_parent = 直接评论对象， root_commentNone = 根评论对象
-            if parent_comment_id:
+            if direct_parent_id:
                 # 直接父id
-                direct_parent = Comment.query.get(parent_comment_id)
+                direct_parent = Comment.query.get(direct_parent_id)
                 # 获取根评论：如果父评论本身有根评论则继承，否则父评论就是根评论
-                root_comment = direct_parent.parent_comment if direct_parent.parent_comment_id else direct_parent
+                root_comment = direct_parent.parent_comment if direct_parent.root_comment_id else direct_parent
 
             print('direct_parent', direct_parent)
             print('root_comment', root_comment)

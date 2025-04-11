@@ -1,6 +1,5 @@
 from datetime import timedelta
 from flask import current_app, url_for
-from sqlalchemy.orm import foreign
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from . import jwt
@@ -404,10 +403,10 @@ class Comment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
     # 父评论
-    parent_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    root_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
     direct_parent_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
     # 根评论
-    parent_comment = db.relationship('Comment', remote_side=[id], foreign_keys=[parent_comment_id])
+    parent_comment = db.relationship('Comment', remote_side=[id], foreign_keys=[root_comment_id])
 
     # 直接父评论
     direct_parent = db.relationship('Comment', remote_side=[id], foreign_keys=[direct_parent_id], back_populates='direct_children')
@@ -427,7 +426,7 @@ class Comment(db.Model):
             'body': self.body,
             'disabled': self.disabled,
             'timestamp': DateUtils.datetime_to_str(self.timestamp),
-            'parent_comment_id': self.parent_comment_id
+            'parent_comment_id': self.root_comment_id
             # 'url': url_for('api.get_comment', id=self.id),
             # 'post_url': url_for('api.get_post', id=self.post_id),
             # 'author_url': url_for('api.get_user', id=self.author_id),
@@ -444,7 +443,7 @@ class Comment(db.Model):
     def to_json_new(self):
         j = {
             'id': self.id,
-            'parentId': self.parent_comment_id,
+            'parentId': self.root_comment_id,
             'directParentId': self.direct_parent_id,
             'uid': self.author.id,
             'content': self.body if not self.disabled else '<p><i>此评论已被版主禁用</i></p>',
