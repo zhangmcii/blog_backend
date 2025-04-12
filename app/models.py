@@ -87,7 +87,7 @@ class NotificationType(Enum):
     COMMENT = '评论'
     REPLY = "回复"
     LIKE = '点赞'
-    Chat = '私信'
+    CHAT = '私信'
 
 
 class Notification(db.Model):
@@ -113,14 +113,14 @@ class Notification(db.Model):
             'id': self.id,
             'type': self.type.value,
             'image': self.trigger_user.image,
-            'time': DateUtils.datetime_to_str(self.created_at),
+            'time': self.created_at if isinstance(self.created_at, str) else DateUtils.datetime_to_str(self.created_at),
             'triggerNickName': self.trigger_user.name,
             'triggerUsername': self.trigger_user.username,
+            'triggerId':self.trigger_user_id,
             'content': '',
             'postId': self.post_id,
             'commentId': self.comment_id,
             'isRead': self.is_read,
-
         }
         return data
 
@@ -258,8 +258,8 @@ class User(db.Model):
     def get_value(key):
         # 获取键值
         value = redis.get(key)
-        if value:
-            return value.decode()
+        # if value:
+        #     return value.decode()
         return value
 
     def follow(self, user):
@@ -307,8 +307,8 @@ class User(db.Model):
             'nickname': self.name,
             'location': self.location,
             'about_me': self.about_me,
-            'member_since': DateUtils.datetime_to_str(self.member_since),
-            'last_seen': DateUtils.datetime_to_str(self.last_seen),
+            'member_since': self.member_since if isinstance(self.member_since, str) else DateUtils.datetime_to_str(self.member_since),
+            'last_seen': self.last_seen if isinstance(self.last_seen, str) else DateUtils.datetime_to_str(self.last_seen),
             'image': self.image,
             'admin': self.is_administrator(),
 
@@ -375,7 +375,7 @@ class Post(db.Model):
             'id': self.id,
             'body': self.body,
             'body_html': self.body_html,
-            'timestamp': DateUtils.datetime_to_str(self.timestamp),
+            'timestamp':self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),
             'author': self.author.username,
             'nick_name': self.author.name,
             'comment_count': self.comments.count(),
@@ -410,8 +410,10 @@ class Comment(db.Model):
     root_comment = db.relationship('Comment', remote_side=[id], foreign_keys=[root_comment_id])
 
     # 直接父评论
-    direct_parent = db.relationship('Comment', remote_side=[id], foreign_keys=[direct_parent_id], back_populates='direct_children')
-    direct_children = db.relationship('Comment', back_populates='direct_parent', foreign_keys=[direct_parent_id], cascade='all, delete-orphan')
+    direct_parent = db.relationship('Comment', remote_side=[id], foreign_keys=[direct_parent_id],
+                                    back_populates='direct_children')
+    direct_children = db.relationship('Comment', back_populates='direct_parent', foreign_keys=[direct_parent_id],
+                                      cascade='all, delete-orphan')
 
     # 通知
     notifications = db.relationship('Notification', backref='comments', lazy='dynamic')
@@ -426,7 +428,7 @@ class Comment(db.Model):
             'image': self.author.image,
             'body': self.body,
             'disabled': self.disabled,
-            'timestamp': DateUtils.datetime_to_str(self.timestamp),
+            'timestamp': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),
             'parent_comment_id': self.root_comment_id
             # 'url': url_for('api.get_comment', id=self.id),
             # 'post_url': url_for('api.get_post', id=self.post_id),
@@ -506,7 +508,7 @@ class Log(db.Model):
             'os': self.os,
             'device': self.device,
             'operate': self.operate,
-            'operateTime': self.operate_time,
+            'operateTime': self.operate_time if isinstance(self.operate_time, str) else DateUtils.datetime_to_str(self.operate_time),
         }
         return json_log
 
@@ -535,7 +537,7 @@ class Message(db.Model):
                 'username': self.sender.name if self.sender.name else self.sender.username,
                 'avatar': self.sender.image,
             },
-            'createTime': DateUtils.datetime_to_str(self.timestamp),
+            'createTime': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),
 
             'sender_id': self.sender_id,
             'is_read': self.is_read,

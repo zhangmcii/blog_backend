@@ -9,6 +9,7 @@ from ..utils.socket_util import ManageSocket
 from flask_sqlalchemy import record_queries
 from ..fake import Fake
 from .. import socketio
+from ..event import *
 from flask_socketio import disconnect
 from flask_socketio import join_room, ConnectionRefusedError
 
@@ -278,6 +279,10 @@ def post(id):
 
 
 def notice_by_comment_type(direct_parent, root_comment, post, comment):
+    """
+        根评论: 通知文章作者
+        一级回复或其他回复: 不通知文章作者，仅通知被直接回复的用户
+    """
     notifications = []
     # 根评论
     if not direct_parent and not root_comment:
@@ -289,47 +294,8 @@ def notice_by_comment_type(direct_parent, root_comment, post, comment):
                 comment_id=comment.id,
                 type=NotificationType.COMMENT  # 文章评论通知
             ))
-            print('根评论通知')
-    # 一级回复
-    elif direct_parent and direct_parent is root_comment:
-        if current_user.id != post.author_id:
-            notifications.append(Notification(
-                receiver_id=post.author_id,
-                trigger_user_id=current_user.id,
-                post_id=post.id,
-                comment_id=comment.id,
-                type=NotificationType.COMMENT  # 文章评论通知
-            ))
-            print('一级回复 通知作者')
-        if current_user.id != root_comment.author_id:
-            notifications.append(Notification(
-                receiver_id=root_comment.author_id,
-                trigger_user_id=current_user.id,
-                post_id=post.id,
-                comment_id=comment.id,
-                type=NotificationType.REPLY  # 回复通知
-            ))
-            print('一级回复 通知根评论用户')
-    # 其他回复
-    elif direct_parent.id != root_comment.id:
-        if current_user.id != post.author_id:
-            notifications.append(Notification(
-                receiver_id=post.author_id,
-                trigger_user_id=current_user.id,
-                post_id=post.id,
-                comment_id=comment.id,
-                type=NotificationType.COMMENT  # 文章评论通知
-            ))
-            print('其他回复 通知作者')
-        if current_user.id != root_comment.author_id:
-            notifications.append(Notification(
-                receiver_id=root_comment.author_id,
-                trigger_user_id=current_user.id,
-                post_id=post.id,
-                comment_id=comment.id,
-                type=NotificationType.REPLY  # 回复通知
-            ))
-            print('其他回复 通知根评论用户')
+    # 一级回复或其他回复
+    else:
         if current_user.id != direct_parent.author_id:
             notifications.append(Notification(
                 receiver_id=direct_parent.author_id,
@@ -338,8 +304,6 @@ def notice_by_comment_type(direct_parent, root_comment, post, comment):
                 comment_id=comment.id,
                 type=NotificationType.REPLY  # 回复通知
             ))
-            print('其他回复 通知其他回复用户')
-
     return notifications
 
 
@@ -518,52 +482,6 @@ def create_comment():
     return jsonify({"message": "Comment created"}), 200
 
 
-# 处理WebSocket连接
-@socketio.on('connect')
-@jwt_required(optional=True)
-def handle_connect(auth):
-    """ 注意：这里不是http请求，所以verify_jwt_in_request()函数不能在这里使用。
-        只能采取手动解码来验证token是否有效
-    """
-    try:
-        # 从Socket.IO连接中获取JWT（通常通过查询参数或头传递）
-        token = request.args.get('token')
-        if not token:
-            raise ConnectionRefusedError('Unauthorized')
-        raw_token = token.replace("Bearer ", "", 1)
-        # 手动解码 Token
-        decoded_token = decode_token(raw_token)
-        current_user_id = decoded_token["sub"]
-
-        # 检查用户是否存在
-        if not User.query.get(current_user_id):
-            raise ConnectionRefusedError("用户不存在")
-
-        # 断开旧连接
-        old_sids = manage_socket.user_socket.get(current_user_id, set())
-        for sid in old_sids:
-            print('断开旧连接：', sid)
-            disconnect(sid)
-        # 记录连接
-        # 读取不了current_user.username。因为这不是http请求，无法应用jwt_required，所以读取不了current_user对象的属性
-        manage_socket.add_user_socket(current_user_id, request.sid)
-        # 将用户加入以自身ID命名的房间
-        join_room(str(current_user_id))
-        u = User.query.get(current_user_id)
-        print(f"用户 {u.username} connected to room。新连接：{request.sid}")
-
-    except Exception as e:
-        print(f"WebSocket connection failed: {str(e)}")
-        raise ConnectionRefusedError('Authentication failed')
-
-
-# 处理WebSocket连接
-@socketio.on('disconnect')
-def handle_disconnect(reason):
-    manage_socket.remove_user_socket(request.sid)
-    print(f'用户断开了', request.sid)
-
-
 @main.route('/notification/unread')
 @jwt_required()
 def get_unread_notification():
@@ -596,16 +514,16 @@ def online():
     return jsonify(data=users, msg='success', total=online_total)
 
 
-@main.route('/msg', methods=['POST'])
-@jwt_required()
-def send_msg():
-    j = request.get_json()
-    user_id = j.get('userId')
-    content = j.get('content')
-    u = User.query.filter_by(id=user_id).first()
-    current_user.send_msg(u, content)
-    db.session.commit()
-    return jsonify(data='', msg='success', detail='')
+# @main.route('/msg', methods=['POST'])
+# @jwt_required()
+# def send_msg():
+#     j = request.get_json()
+#     user_id = j.get('userId')
+#     content = j.get('content')
+#     u = User.query.filter_by(id=user_id).first()
+#     current_user.send_msg(u, content)
+#     db.session.commit()
+#     return jsonify(data='', msg='success', detail='')
 
 
 @main.route('/msg', methods=['GET'])
