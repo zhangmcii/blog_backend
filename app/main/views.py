@@ -33,7 +33,7 @@ def after_request(response):
 @jwt_required()
 def edit_peofile():
     user_info = request.get_json()
-    current_user.name = user_info.get('name')
+    current_user.nickname = user_info.get('nickname')
     current_user.location = user_info.get('location')
     current_user.about_me = user_info.get('about_me')
     db.session.add(current_user)
@@ -52,7 +52,7 @@ def edit_peofile_admin(id):
     user.confirmed = user_info.get('confirmed')
     user.role = Role.query.get(int(user_info.get('role')))
 
-    user.name = user_info.get('name')
+    user.nickname = user_info.get('nickname')
     user.location = user_info.get('location')
     user.about_me = user_info.get('about_me')
 
@@ -171,7 +171,7 @@ def followers(username):
             is_following_back = Follow.query.filter_by(follower=user, followed=item.follower).first() is not None
             follows.append({
                 'id': item.follower.id,
-                'nickname': item.follower.name,
+                'nickname': item.follower.nickname,
                 'username': item.follower.username,
                 'image': item.follower.image,
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
@@ -196,7 +196,7 @@ def followed_by(username):
             is_following_back = Follow.query.filter_by(follower=item.followed, followed=user).first() is not None
             follows.append({
                 'id': item.followed.id,
-                'nickname': item.followed.name,
+                'nickname': item.followed.nickname,
                 'username': item.followed.username,
                 'image': item.followed.image,
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
@@ -508,7 +508,7 @@ def online():
     users = []
     for user_id in user_ids:
         u = User.query.get(user_id)
-        users.append({'username': u.username, 'nickName': u.name})
+        users.append({'username': u.username, 'nickName': u.nickname})
     print(users)
     online_total = len(users)
     return jsonify(data=users, msg='success', total=online_total)

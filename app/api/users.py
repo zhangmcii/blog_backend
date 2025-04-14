@@ -69,7 +69,7 @@ def search_followed():
         User.id.in_(followed_user_ids),
         db.or_(
             User.username.ilike(f'%{search_query}%'),
-            User.name.ilike(f'%{search_query}%')
+            User.nickname.ilike(f'%{search_query}%')
         )
     ).all()
     follows = [{'username': item.username, 'image': item.image}
@@ -91,7 +91,7 @@ def search_fan():
         User.id.in_(followed_user_ids),
         db.or_(
             User.username.ilike(f'%{search_query}%'),
-            User.name.ilike(f'%{search_query}%')
+            User.nickname.ilike(f'%{search_query}%')
         )
     ).all()
     follows = [{'username': item.username, 'image': item.image}

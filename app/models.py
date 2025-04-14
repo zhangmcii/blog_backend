@@ -114,7 +114,7 @@ class Notification(db.Model):
             'type': self.type.value,
             'image': self.trigger_user.image,
             'time': self.created_at if isinstance(self.created_at, str) else DateUtils.datetime_to_str(self.created_at),
-            'triggerNickName': self.trigger_user.name,
+            'triggerNickName': self.trigger_user.nickname,
             'triggerUsername': self.trigger_user.username,
             'triggerId':self.trigger_user_id,
             'content': '',
@@ -134,7 +134,7 @@ class User(db.Model):
     confirmed = db.Column(db.Boolean, default=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     # 用户资料
-    name = db.Column(db.String(64))
+    nickname = db.Column(db.String(64))
     location = db.Column(db.String(64))
     about_me = db.Column(db.Text())
     member_since = db.Column(db.DateTime(), default=DateUtils.now_time)
@@ -304,7 +304,7 @@ class User(db.Model):
             'url': url_for('api.get_user', id=self.id),
             'id': self.id,
             'username': self.username,
-            'nickname': self.name,
+            'nickname': self.nickname,
             'location': self.location,
             'about_me': self.about_me,
             'member_since': self.member_since if isinstance(self.member_since, str) else DateUtils.datetime_to_str(self.member_since),
@@ -377,7 +377,7 @@ class Post(db.Model):
             'body_html': self.body_html,
             'timestamp':self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),
             'author': self.author.username,
-            'nick_name': self.author.name,
+            'nick_name': self.author.nickname,
             'comment_count': self.comments.count(),
             'image': self.author.image,
             'praise_num': self.praise.count(),
@@ -424,7 +424,7 @@ class Comment(db.Model):
         json_comment = {
             'id': self.id,
             'author': self.author.username,
-            'nick_name': self.author.name,
+            'nick_name': self.author.nickname,
             'image': self.author.image,
             'body': self.body,
             'disabled': self.disabled,
@@ -453,7 +453,7 @@ class Comment(db.Model):
             'likes': self.praise.count(),
             'createTime': DateUtils.datetime_to_str(self.timestamp),
             'user': {
-                'username': self.author.name if self.author.name else self.author.username,
+                'username': self.author.nickname if self.author.nickname else self.author.username,
                 'avatar': self.author.image,
                 # 'address': self.author.location,
                 'homeLink': f'/user/{self.author.username}',
@@ -534,7 +534,7 @@ class Message(db.Model):
             'content': self.content,
             'uid': self.sender_id,
             'user': {
-                'username': self.sender.name if self.sender.name else self.sender.username,
+                'username': self.sender.nickname if self.sender.nickname else self.sender.username,
                 'avatar': self.sender.image,
             },
             'createTime': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),

@@ -44,7 +44,7 @@ def login():
             'token': 'Bearer ' + token,
             'id': user.id,
             'username': user.username,
-            'nickname': user.name,
+            'nickname': user.nickname,
             'admin': user.is_administrator(),
             'image': user.image,
             'roleId': user.role_id,
@@ -54,7 +54,7 @@ def login():
             'likeIds': [praise.comment_id for praise in user.praises if praise is not None],
             'followed': [{'id': item.followed.id,
                           'uName':item.followed.username,
-                          'name': item.followed.name if item.followed.name else item.followed.username,
+                          'name': item.followed.nickname if item.followed.nickname else item.followed.username,
                           'avatar': item.followed.image} for item in
                          user.followed.order_by(Follow.timestamp.desc()).all() if
                          item.followed.username != user.username],
