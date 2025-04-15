@@ -20,19 +20,6 @@ def before_request():
         #     return '用户邮件未认证'
 
 
-# @auth.route('/login', methods=['post'])
-# def login():
-#     j = request.get_json()
-#     user = User.query.filter_by(username=j.get('uiAccountName')).one_or_none()
-#     if user:
-#         if user.verify_password(j.get('uiPassword')):
-#             token = create_access_token(identity=user, expires_delta=False)
-#             user.ping()
-#             return jsonify(msg="登录成功", token='Bearer ' + token, username=user.username, name=user.name,
-#                            admin=user.is_administrator(), image=user.image, roleId=user.role_id,
-#                            isConfirmed=user.confirmed), 200
-#     return jsonify(msg="登陆失败")
-
 @auth.route('/login', methods=['post'])
 def login():
     j = request.get_json()

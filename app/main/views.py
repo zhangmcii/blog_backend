@@ -208,7 +208,7 @@ def followed_by(username):
 @main.route('/can/<int:perm>')
 @jwt_required(optional=True)
 def can(perm):
-    if (current_user):
+    if current_user:
         return jsonify(data=current_user.can(perm))
     return jsonify(data=False)
 
@@ -222,6 +222,7 @@ def post(id):
     if request.method == 'POST':
         verify_jwt_in_request()
         data = request.get_json()
+        at = data.get('at')
         # 直接父id
         direct_parent_id = data.get('directParentId')
         try:
@@ -237,8 +238,6 @@ def post(id):
                 # 获取根评论：如果父评论本身有根评论则继承，否则父评论就是根评论
                 root_comment = direct_parent.root_comment if direct_parent.root_comment_id else direct_parent
 
-            print('direct_parent', direct_parent)
-            print('root_comment', root_comment)
             # 创建评论（设置两个父级关系）
             comment = Comment(
                 body=data.get('body'),
@@ -250,7 +249,7 @@ def post(id):
             db.session.add(comment)
             db.session.flush()
             # 通知
-            notifications = notice_by_comment_type(direct_parent, root_comment, post, comment)
+            notifications = notice_by_comment_type(direct_parent, root_comment, post, comment, at)
             db.session.add_all(notifications)
             db.session.commit()
             # 实时推送
@@ -260,9 +259,7 @@ def post(id):
                     notification.to_json(),
                     to=str(notification.receiver_id)
                 )
-
             return redirect(url_for('.post', id=post.id, page=-1))
-
         except Exception as e:
             db.session.rollback()
             return jsonify(data='', total=0, currentPage=1, msg='fail', detail=str(e)), 500
@@ -278,7 +275,7 @@ def post(id):
                    currentPage=page, msg='success')
 
 
-def notice_by_comment_type(direct_parent, root_comment, post, comment):
+def notice_by_comment_type(direct_parent, root_comment, post, comment, at_list):
     """
         根评论: 通知文章作者
         一级回复或其他回复: 不通知文章作者，仅通知被直接回复的用户
@@ -292,7 +289,7 @@ def notice_by_comment_type(direct_parent, root_comment, post, comment):
                 trigger_user_id=current_user.id,
                 post_id=post.id,
                 comment_id=comment.id,
-                type=NotificationType.COMMENT  # 文章评论通知
+                type=NotificationType.COMMENT
             ))
     # 一级回复或其他回复
     else:
@@ -302,8 +299,18 @@ def notice_by_comment_type(direct_parent, root_comment, post, comment):
                 trigger_user_id=current_user.id,
                 post_id=post.id,
                 comment_id=comment.id,
-                type=NotificationType.REPLY  # 回复通知
+                type=NotificationType.REPLY
             ))
+
+    # @的通知
+    for receiver_id in at_list:
+        notifications.append(Notification(
+            receiver_id=receiver_id,
+            trigger_user_id=current_user.id,
+            post_id=post.id,
+            comment_id=comment.id,
+            type=NotificationType.AT
+        ))
     return notifications
 
 
@@ -512,18 +519,6 @@ def online():
     print(users)
     online_total = len(users)
     return jsonify(data=users, msg='success', total=online_total)
-
-
-# @main.route('/msg', methods=['POST'])
-# @jwt_required()
-# def send_msg():
-#     j = request.get_json()
-#     user_id = j.get('userId')
-#     content = j.get('content')
-#     u = User.query.filter_by(id=user_id).first()
-#     current_user.send_msg(u, content)
-#     db.session.commit()
-#     return jsonify(data='', msg='success', detail='')
 
 
 @main.route('/msg', methods=['GET'])
