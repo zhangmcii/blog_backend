@@ -10,6 +10,8 @@ from ..utils.text_filter import DFAFilter
 from flask_sqlalchemy import record_queries
 from ..fake import Fake
 from .. import socketio
+from .. import limiter
+from werkzeug.exceptions import TooManyRequests
 from ..event import *
 from flask_socketio import disconnect
 from flask_socketio import join_room, ConnectionRefusedError
@@ -215,64 +217,55 @@ def can(perm):
 
 
 # --------------------------- 评论 ---------------------------
-# get 评论已使用api中的
-@main.route('/post/<int:id>', methods=['GET', 'POST'])
+@main.route('/post/<int:id>', methods=['POST'])
+@limiter.limit("3/minute")
 def post(id):
-    """发布和获取博客评论（适配direct_parent关系）"""
+    """发布评论（适配direct_parent关系）"""
     post = Post.query.get_or_404(id)
-    if request.method == 'POST':
-        verify_jwt_in_request()
-        data = request.get_json()
-        at = data.get('at')
-        # 直接父id
-        direct_parent_id = data.get('directParentId')
-        try:
-            direct_parent = None
-            root_comment = None
+    verify_jwt_in_request()
+    data = request.get_json()
+    at = data.get('at')
+    # 直接父id
+    direct_parent_id = data.get('directParentId')
+    try:
+        direct_parent = None
+        root_comment = None
 
-            # 若是根评论，  则direct_parent=root_commentNone = None
-            # 若是一级回复，则direct_parent=root_commentNone = 根评论对象
-            # 若是其他回复，则direct_parent = 直接评论对象， root_commentNone = 根评论对象
-            if direct_parent_id:
-                # 直接父id
-                direct_parent = Comment.query.get(direct_parent_id)
-                # 获取根评论：如果父评论本身有根评论则继承，否则父评论就是根评论
-                root_comment = direct_parent.root_comment if direct_parent.root_comment_id else direct_parent
-            # 创建评论（设置两个父级关系）
-            comment = Comment(
-                body=DFAFilter().filter(data.get('body'), '*'),
-                post=post,
-                author=current_user,
-                direct_parent=direct_parent,
-                root_comment=root_comment
+        # 若是根评论，  则direct_parent=root_commentNone = None
+        # 若是一级回复，则direct_parent=root_commentNone = 根评论对象
+        # 若是其他回复，则direct_parent = 直接评论对象， root_commentNone = 根评论对象
+        if direct_parent_id:
+            # 直接父id
+            direct_parent = Comment.query.get(direct_parent_id)
+            # 获取根评论：如果父评论本身有根评论则继承，否则父评论就是根评论
+            root_comment = direct_parent.root_comment if direct_parent.root_comment_id else direct_parent
+        # 创建评论（设置两个父级关系）
+        comment = Comment(
+            body=DFAFilter().filter(data.get('body'), '*'),
+            post=post,
+            author=current_user,
+            direct_parent=direct_parent,
+            root_comment=root_comment
+        )
+        db.session.add(comment)
+        db.session.flush()
+        # 通知
+        notifications = notice_by_comment_type(direct_parent, root_comment, post, comment, at)
+        db.session.add_all(notifications)
+        db.session.commit()
+        # 实时推送
+        for notification in notifications:
+            socketio.emit(
+                'new_notification',
+                notification.to_json(),
+                to=str(notification.receiver_id)
             )
-            db.session.add(comment)
-            db.session.flush()
-            # 通知
-            notifications = notice_by_comment_type(direct_parent, root_comment, post, comment, at)
-            db.session.add_all(notifications)
-            db.session.commit()
-            # 实时推送
-            for notification in notifications:
-                socketio.emit(
-                    'new_notification',
-                    notification.to_json(),
-                    to=str(notification.receiver_id)
-                )
-            return redirect(url_for('.post', id=post.id, page=-1))
-        except Exception as e:
-            db.session.rollback()
-            return jsonify(data='', total=0, currentPage=1, msg='fail', detail=str(e)), 500
-
-    # GET请求处理（保持原分页逻辑）
-    page = request.args.get('page', 1, type=int)
-    if page == -1:
-        page = (post.comments.count() - 1) // current_app.config['FLASKY_COMMENTS_PER_PAGE'] + 1
-    pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
-        page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
-        error_out=False)
-    return jsonify(data=[comment.to_json_new() for comment in pagination.items], total=post.comments.count(),
-                   currentPage=page, msg='success')
+        return redirect(url_for('api.get_comments_new', id=post.id, page=1))
+    except TooManyRequests:
+        raise
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(data='', total=0, currentPage=1, msg='fail', detail=str(e)), 500
 
 
 def notice_by_comment_type(direct_parent, root_comment, post, comment, at_list):

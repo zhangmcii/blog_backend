@@ -35,15 +35,6 @@ def get_comment(id):
     return jsonify(comment.to_json())
 
 
-# @api.route('/posts/<int:id>/comments/')
-# def get_post_comments(id):
-#     post = Post.query.get_or_404(id)
-#     page = request.args.get('page', 1, type=int)
-#     per_page = request.args.get('per_page',current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
-#     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
-#         page=page, per_page=per_page, error_out=False)
-#     comments = pagination.items
-#     return jsonify(data=[comment.to_json() for comment in comments],total=pagination.total,msg='success')
 
 
 @api.route('/posts/<int:id>/comments/', methods=['POST'])
@@ -61,10 +52,10 @@ def new_post_comment(id):
 @api.route('/posts/<int:id>/comments/')
 def get_comments_new(id):
     """获取文章的根评论及第一层回复（适配direct_parent关系）"""
+    print('执行了')
     post = Post.query.get_or_404(id)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('size', current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
-
     # 获取根评论分页（parent_comment_id为None）
     root_comments_pagination = post.comments.filter(Comment.root_comment_id.is_(None)).order_by(
         Comment.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)

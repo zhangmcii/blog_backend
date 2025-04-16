@@ -5,16 +5,19 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_redis import FlaskRedis
 from flask_socketio import SocketIO
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import config
 from .mycelery import celery_init_app
 import os
+
 
 db = SQLAlchemy()
 jwt = JWTManager()
 mail = Mail()
 redis = FlaskRedis()
 socketio = SocketIO()
-
+limiter = Limiter(get_remote_address, storage_uri=f'redis://:1234@{os.getenv('REDIS_HOST') or os.getenv('FLASK_RUN_HOST')}:6379/3')
 def create_app(config_name):
     app = Flask(__name__)
     # 跨域
@@ -38,6 +41,7 @@ def create_app(config_name):
     redis.init_app(app, decode_responses=True)
     celery_init_app(app)
     socketio.init_app(app, cors_allowed_origins="*", ping_timeout=30, ping_interval=60)
+    limiter.init_app(app)
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')

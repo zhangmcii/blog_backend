@@ -1,6 +1,7 @@
 from . import main
 from .. import jwt
 from flask import request, jsonify
+from werkzeug.exceptions import TooManyRequests
 
 
 @jwt.unauthorized_loader
@@ -27,6 +28,15 @@ def page_not_found(e):
         response.status_code = 404
         return response
     return '404错误', 404
+
+
+@main.errorhandler(TooManyRequests)
+def handle_429(e):
+    return jsonify(
+        code=429,
+        message="请求频率超限",
+        error=str(e.description)
+    ), 429
 
 
 @main.app_errorhandler(500)
