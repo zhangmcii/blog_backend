@@ -6,6 +6,7 @@ from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
 from ..utils.time_util import DateUtils
 from ..utils.socket_util import ManageSocket
+from ..utils.text_filter import DFAFilter
 from flask_sqlalchemy import record_queries
 from ..fake import Fake
 from .. import socketio
@@ -237,10 +238,9 @@ def post(id):
                 direct_parent = Comment.query.get(direct_parent_id)
                 # 获取根评论：如果父评论本身有根评论则继承，否则父评论就是根评论
                 root_comment = direct_parent.root_comment if direct_parent.root_comment_id else direct_parent
-
             # 创建评论（设置两个父级关系）
             comment = Comment(
-                body=data.get('body'),
+                body=DFAFilter().filter(data.get('body'), '*'),
                 post=post,
                 author=current_user,
                 direct_parent=direct_parent,
