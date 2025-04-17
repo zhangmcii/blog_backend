@@ -52,7 +52,6 @@ def new_post_comment(id):
 @api.route('/posts/<int:id>/comments/')
 def get_comments_new(id):
     """获取文章的根评论及第一层回复（适配direct_parent关系）"""
-    print('执行了')
     post = Post.query.get_or_404(id)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('size', current_app.config['FLASKY_COMMENTS_PER_PAGE'], type=int)
