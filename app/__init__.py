@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, current_user
 from flask_mail import Mail
 from flask_redis import FlaskRedis
 from flask_socketio import SocketIO
@@ -11,13 +11,17 @@ from config import config
 from .mycelery import celery_init_app
 import os
 
+def my_key_func():
+    """根据当前用户id限速"""
+    return current_user.id if current_user else get_remote_address
 
 db = SQLAlchemy()
 jwt = JWTManager()
 mail = Mail()
 redis = FlaskRedis()
 socketio = SocketIO()
-limiter = Limiter(get_remote_address, storage_uri=f'redis://:1234@{os.getenv('REDIS_HOST') or os.getenv('FLASK_RUN_HOST')}:6379/3')
+limiter = Limiter(my_key_func, storage_uri=f'redis://:1234@{os.getenv('REDIS_HOST') or os.getenv('FLASK_RUN_HOST')}:6379/3')
+
 def create_app(config_name):
     app = Flask(__name__)
     # 跨域
