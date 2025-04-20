@@ -1,3 +1,5 @@
+import os
+
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token, verify_jwt_in_request
 from . import main
 from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType, Message
@@ -15,10 +17,14 @@ from werkzeug.exceptions import TooManyRequests
 from ..event import *
 from flask_socketio import disconnect
 from flask_socketio import join_room, ConnectionRefusedError
+import qiniu
+import time
+import os
 
 """编辑资料、博客文章、关注者信息、评论信息"""
 
 manage_socket = ManageSocket()
+q = qiniu.Auth(os.getenv('QINIU_ACCESS_KEY'), os.getenv('QINIU_SECRET_KEY'))
 
 
 @main.after_app_request
@@ -548,3 +554,36 @@ def mark_messages_read():
     ).update({'is_read': True}, synchronize_session=False)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
+
+
+@main.route('/get_upload_token', methods=['GET'])
+def get_upload_token():
+    # 定义上传策略
+    policy = {
+        # 限制上传文件的最大尺寸，单位为字节，这里设置为 10MB
+        'fsizeLimit': 10 * 1024 * 1024,
+        # 设置上传凭证的有效期，单位为秒，这里设置为 1 小时
+        'deadline': int(time.time()) + 3600
+    }
+    # 生成上传凭证，传入上传策略
+    token = q.upload_token(os.getenv('QINIU_BUCKET_NAME'), policy=policy)
+    return jsonify({'upload_token': token})
+
+
+@main.route('/get_signed_image_urls', methods=['POST'])
+def get_signed_image_urls():
+    data = request.get_json()
+    keys = data.get('keys', [])
+    if not keys:
+        return jsonify({'error': 'Missing keys parameter'}), 400
+    signed_urls = []
+    for key in keys:
+        # 添加图片瘦身参数，这里以调整图片质量为 80 为例
+        fops = 'imageMogr2/quality/80'
+        base_url = f'http://{os.getenv('QINIU_DOMAIN')}/{key}'
+        # 拼接处理参数到基础 URL
+        processed_url = base_url + '?' + fops
+        # 生成带处理参数的签名 URL
+        private_url = q.private_download_url(processed_url, expires=3600)
+        signed_urls.append(private_url)
+    return jsonify({'signed_urls': signed_urls})
