@@ -117,7 +117,7 @@ class Notification(db.Model):
             'time': self.created_at if isinstance(self.created_at, str) else DateUtils.datetime_to_str(self.created_at),
             'triggerNickName': self.trigger_user.nickname,
             'triggerUsername': self.trigger_user.username,
-            'triggerId':self.trigger_user_id,
+            'triggerId': self.trigger_user_id,
             'content': '',
             'postId': self.post_id,
             'commentId': self.comment_id,
@@ -308,8 +308,10 @@ class User(db.Model):
             'nickname': self.nickname,
             'location': self.location,
             'about_me': self.about_me,
-            'member_since': self.member_since if isinstance(self.member_since, str) else DateUtils.datetime_to_str(self.member_since),
-            'last_seen': self.last_seen if isinstance(self.last_seen, str) else DateUtils.datetime_to_str(self.last_seen),
+            'member_since': self.member_since if isinstance(self.member_since, str) else DateUtils.datetime_to_str(
+                self.member_since),
+            'last_seen': self.last_seen if isinstance(self.last_seen, str) else DateUtils.datetime_to_str(
+                self.last_seen),
             'image': self.image,
             'admin': self.is_administrator(),
 
@@ -358,11 +360,18 @@ def user_lookup_callback(__jwt_header, jwt_data):
     return User.query.filter_by(id=identify).one_or_none()
 
 
+class PostType(Enum):
+    TEXT = '纯文字'
+    IMAGE = '图文'
+
+
 class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
     body_html = db.Column(db.Text)
+    type = db.Column(db.Enum(PostType))
+    images = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
@@ -376,7 +385,10 @@ class Post(db.Model):
             'id': self.id,
             'body': self.body,
             'body_html': self.body_html,
-            'timestamp':self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),
+            'post_images': self.images.split(';'),
+            'post_type': self.type.value,
+            'timestamp': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(
+                self.timestamp),
             'author': self.author.username,
             'nick_name': self.author.nickname,
             'comment_count': self.comments.count(),
@@ -429,7 +441,8 @@ class Comment(db.Model):
             'image': self.author.image,
             'body': self.body,
             'disabled': self.disabled,
-            'timestamp': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),
+            'timestamp': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(
+                self.timestamp),
             'parent_comment_id': self.root_comment_id
             # 'url': url_for('api.get_comment', id=self.id),
             # 'post_url': url_for('api.get_post', id=self.post_id),
@@ -509,7 +522,8 @@ class Log(db.Model):
             'os': self.os,
             'device': self.device,
             'operate': self.operate,
-            'operateTime': self.operate_time if isinstance(self.operate_time, str) else DateUtils.datetime_to_str(self.operate_time),
+            'operateTime': self.operate_time if isinstance(self.operate_time, str) else DateUtils.datetime_to_str(
+                self.operate_time),
         }
         return json_log
 
@@ -538,7 +552,8 @@ class Message(db.Model):
                 'username': self.sender.nickname if self.sender.nickname else self.sender.username,
                 'avatar': self.sender.image,
             },
-            'createTime': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(self.timestamp),
+            'createTime': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(
+                self.timestamp),
 
             'sender_id': self.sender_id,
             'is_read': self.is_read,

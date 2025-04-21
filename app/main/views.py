@@ -591,10 +591,25 @@ def get_signed_image_urls():
         signed_urls.append(private_url)
     return jsonify({'signed_urls': signed_urls})
 
+
 @main.route('/upload_callback', methods=['POST'])
 def post_image():
     data = request.get_json()
     blog_text = data.get('blog_text', '')
     file_name = data.get('filename')
-    print('收到回调通知',data)
-    return jsonify(data=data, msg='success',  detail='')
+    print('收到回调通知', data)
+    return jsonify(data=data, msg='success', detail='')
+
+
+@main.route('/rich_post', methods=['POST'])
+@jwt_required()
+def create_post():
+    data = request.get_json()
+    content = data.get('content', '')
+    image_urls = data.get('imageUrls', [])
+    image = ';'.join(image_urls)
+    print('富文本', content, image)
+    p = Post(body=content, body_html=None, images=image, author=current_user)
+    db.session.add(p)
+    db.session.commit()
+    return jsonify(data='', msg='success', detail='')
