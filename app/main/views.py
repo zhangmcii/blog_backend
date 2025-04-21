@@ -563,7 +563,10 @@ def get_upload_token():
         # 限制上传文件的最大尺寸，单位为字节，这里设置为 10MB
         'fsizeLimit': 10 * 1024 * 1024,
         # 设置上传凭证的有效期，单位为秒，这里设置为 1 小时
-        'deadline': int(time.time()) + 3600
+        'deadline': int(time.time()) + 3600,
+        # 'callbackUrl': 'http://172.18.66.95:8082/upload_callback',
+        # 'callbackBody':'filename=$(fname)&filesize=$(fsize)&blog_text=$(x:blog_text)',
+        # 'callbackBodyType':'application/json'
     }
     # 生成上传凭证，传入上传策略
     token = q.upload_token(os.getenv('QINIU_BUCKET_NAME'), policy=policy)
@@ -587,3 +590,11 @@ def get_signed_image_urls():
         private_url = q.private_download_url(processed_url, expires=3600)
         signed_urls.append(private_url)
     return jsonify({'signed_urls': signed_urls})
+
+@main.route('/upload_callback', methods=['POST'])
+def post_image():
+    data = request.get_json()
+    blog_text = data.get('blog_text', '')
+    file_name = data.get('filename')
+    print('收到回调通知',data)
+    return jsonify(data=data, msg='success',  detail='')
