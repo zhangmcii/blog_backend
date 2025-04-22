@@ -385,7 +385,7 @@ class Post(db.Model):
             'id': self.id,
             'body': self.body,
             'body_html': self.body_html,
-            'post_images': self.images.split(';'),
+            'post_images': self.images.split(';') if self.images else [],
             'post_type': self.type.value,
             'timestamp': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(
                 self.timestamp),

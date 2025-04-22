@@ -2,7 +2,8 @@ import os
 
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token, verify_jwt_in_request
 from . import main
-from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType, Message
+from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType, \
+    Message, PostType
 from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -78,7 +79,8 @@ def index():
     if request.method == 'POST' and current_user.can(Permission.WRITE):
         j = request.get_json()
         body_html = j.get('bodyHtml')
-        post = Post(body=j.get('body'), body_html=body_html if body_html else None, author=current_user)
+        post = Post(body=j.get('body'), body_html=body_html if body_html else None, type=PostType.TEXT,
+                    author=current_user)
         db.session.add(post)
         db.session.commit()
     page = request.args.get('page', 1, type=int)
@@ -609,7 +611,7 @@ def create_post():
     image_urls = data.get('imageUrls', [])
     image = ';'.join(image_urls)
     print('富文本', content, image)
-    p = Post(body=content, body_html=None, images=image, author=current_user)
+    p = Post(body=content, body_html=None, type=PostType.IMAGE, images=image, author=current_user)
     db.session.add(p)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
