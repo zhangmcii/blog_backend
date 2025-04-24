@@ -3,6 +3,8 @@ from . import api
 from ..models import User, Post, Follow
 from flask_jwt_extended import current_user
 from .. import db
+from ..utils.common import get_avatars_url
+
 
 @api.route('/users/<int:id>')
 def get_user(id):
@@ -20,10 +22,10 @@ def get_user_posts(id):
     posts = pagination.items
     prev = None
     if pagination.has_prev:
-        prev = url_for('api.get_user_posts', id=id, page=page-1)
+        prev = url_for('api.get_user_posts', id=id, page=page - 1)
     next = None
     if pagination.has_next:
-        next = url_for('api.get_user_posts', id=id, page=page+1)
+        next = url_for('api.get_user_posts', id=id, page=page + 1)
     return jsonify({
         'posts': [post.to_json() for post in posts],
         'prev': prev,
@@ -42,16 +44,17 @@ def get_user_followed_posts(id):
     posts = pagination.items
     prev = None
     if pagination.has_prev:
-        prev = url_for('api.get_user_followed_posts', id=id, page=page-1)
+        prev = url_for('api.get_user_followed_posts', id=id, page=page - 1)
     next = None
     if pagination.has_next:
-        next = url_for('api.get_user_followed_posts', id=id, page=page+1)
+        next = url_for('api.get_user_followed_posts', id=id, page=page + 1)
     return jsonify({
         'posts': [post.to_json() for post in posts],
         'prev': prev,
         'next': next,
         'count': pagination.total
     })
+
 
 # 在关注列表中，根据用户昵称或者账号搜索
 @api.route('/search_followed', methods=['GET'])
@@ -72,9 +75,10 @@ def search_followed():
             User.nickname.ilike(f'%{search_query}%')
         )
     ).all()
-    follows = [{'username': item.username, 'image': item.image}
+    follows = [{'username': item.username, 'image': get_avatars_url(item.image)}
                for item in followed_users if item.username != user.username]
     return jsonify(data=follows, msg='success')
+
 
 @api.route('/search_fan', methods=['GET'])
 def search_fan():
@@ -94,6 +98,6 @@ def search_fan():
             User.nickname.ilike(f'%{search_query}%')
         )
     ).all()
-    follows = [{'username': item.username, 'image': item.image}
+    follows = [{'username': item.username, 'image': get_avatars_url(item.image)}
                for item in followed_users if item.username != user.username]
     return jsonify(data=follows, msg='success')

@@ -8,6 +8,7 @@ from ..models import User
 from .. import db
 from ..mycelery.tasks import send_email
 from ..utils.time_util import DateUtils
+from ..utils.common import get_avatars_url
 from ..models import Follow
 
 
@@ -33,16 +34,16 @@ def login():
             'username': user.username,
             'nickname': user.nickname,
             'admin': user.is_administrator(),
-            'image': user.image,
+            'image': get_avatars_url(user.image),
             'roleId': user.role_id,
             'isConfirmed': user.confirmed,
             'location': user.location,
             'about_me': user.about_me,
             'likeIds': [praise.comment_id for praise in user.praises if praise is not None],
             'followed': [{'id': item.followed.id,
-                          'uName':item.followed.username,
+                          'uName': item.followed.username,
                           'name': item.followed.nickname if item.followed.nickname else item.followed.username,
-                          'avatar': item.followed.image} for item in
+                          'avatar': get_avatars_url(item.followed.image)} for item in
                          user.followed.order_by(Follow.timestamp.desc()).all() if
                          item.followed.username != user.username],
         }

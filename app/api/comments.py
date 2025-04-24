@@ -35,8 +35,6 @@ def get_comment(id):
     return jsonify(comment.to_json())
 
 
-
-
 @api.route('/posts/<int:id>/comments/', methods=['POST'])
 @permission_required(Permission.COMMENT)
 def new_post_comment(id):
@@ -48,6 +46,7 @@ def new_post_comment(id):
     db.session.commit()
     return jsonify(comment.to_json()), 201, \
         {'Location': url_for('api.get_comment', id=comment.id)}
+
 
 @api.route('/posts/<int:id>/comments/')
 def get_comments_new(id):

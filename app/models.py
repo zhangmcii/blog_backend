@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from . import jwt
 from .utils.time_util import DateUtils
+from .utils.common import get_avatars_url
 from flask_jwt_extended import current_user, create_access_token
 import random
 from . import redis
@@ -113,7 +114,7 @@ class Notification(db.Model):
         data = {
             'id': self.id,
             'type': self.type.value,
-            'image': self.trigger_user.image,
+            'image': get_avatars_url(self.trigger_user.image),
             'time': self.created_at if isinstance(self.created_at, str) else DateUtils.datetime_to_str(self.created_at),
             'triggerNickName': self.trigger_user.nickname,
             'triggerUsername': self.trigger_user.username,
@@ -312,7 +313,7 @@ class User(db.Model):
                 self.member_since),
             'last_seen': self.last_seen if isinstance(self.last_seen, str) else DateUtils.datetime_to_str(
                 self.last_seen),
-            'image': self.image,
+            'image': get_avatars_url(self.image),
             'admin': self.is_administrator(),
 
             'email': self.email,
@@ -392,7 +393,7 @@ class Post(db.Model):
             'author': self.author.username,
             'nick_name': self.author.nickname,
             'comment_count': self.comments.count(),
-            'image': self.author.image,
+            'image': get_avatars_url(self.author.image),
             'praise_num': self.praise.count(),
             'has_praised': Praise.has_praised(self.id)
         }
@@ -438,7 +439,7 @@ class Comment(db.Model):
             'id': self.id,
             'author': self.author.username,
             'nick_name': self.author.nickname,
-            'image': self.author.image,
+            'image': get_avatars_url(self.author.image),
             'body': self.body,
             'disabled': self.disabled,
             'timestamp': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(
@@ -468,7 +469,7 @@ class Comment(db.Model):
             'createTime': DateUtils.datetime_to_str(self.timestamp),
             'user': {
                 'username': self.author.nickname if self.author.nickname else self.author.username,
-                'avatar': self.author.image,
+                'avatar': get_avatars_url(self.author.image),
                 # 'address': self.author.location,
                 'homeLink': f'/user/{self.author.username}',
             }
@@ -550,7 +551,7 @@ class Message(db.Model):
             'uid': self.sender_id,
             'user': {
                 'username': self.sender.nickname if self.sender.nickname else self.sender.username,
-                'avatar': self.sender.image,
+                'avatar': get_avatars_url(self.sender.image),
             },
             'createTime': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(
                 self.timestamp),

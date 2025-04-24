@@ -21,6 +21,7 @@ from flask_socketio import join_room, ConnectionRefusedError
 import qiniu
 import time
 import os
+from ..utils.common import get_avatars_url
 
 """编辑资料、博客文章、关注者信息、评论信息"""
 
@@ -184,7 +185,7 @@ def followers(username):
                 'id': item.follower.id,
                 'nickname': item.follower.nickname,
                 'username': item.follower.username,
-                'image': item.follower.image,
+                'image': get_avatars_url(item.follower.image),
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
                 'is_following': is_following_back
             })
@@ -209,7 +210,7 @@ def followed_by(username):
                 'id': item.followed.id,
                 'nickname': item.followed.nickname,
                 'username': item.followed.username,
-                'image': item.followed.image,
+                'image': get_avatars_url(item.followed.image),
                 'timestamp': DateUtils.datetime_to_str(item.timestamp),
                 'is_following_back': is_following_back
             })
@@ -268,7 +269,19 @@ def post(id):
                 notification.to_json(),
                 to=str(notification.receiver_id)
             )
-        return redirect(url_for('api.get_comments_new', id=post.id, page=1))
+        current_comment = {
+            'id': comment.id,
+            'parentId': comment.root_comment_id,
+            'uid': current_user.id,
+            'content': comment.body,
+            'createTime': DateUtils.datetime_to_str(comment.timestamp),
+            'user': {
+                'username': current_user.nickname if current_user.nickname else current_user.username,
+                'avatar': get_avatars_url(current_user.image)
+            },
+            'reply': ''
+        }
+        return jsonify(data=current_comment, msg='success', detail='')
     except TooManyRequests:
         raise
     except Exception as e:
@@ -377,7 +390,7 @@ def add_user_and_post():
     current_user.image = image
     db.session.add(current_user)
     db.session.commit()
-    return jsonify(image=image, msg='success')
+    return jsonify(image=get_avatars_url(image), msg='success')
 
 
 @main.route('/praise/<int:id>', methods=['GET', 'POST'])
@@ -609,9 +622,9 @@ def create_post():
     data = request.get_json()
     content = data.get('content', '')
     image_urls = data.get('imageUrls', [])
-    image = ';'.join(image_urls)
-    print('富文本', content, image)
-    p = Post(body=content, body_html=None, type=PostType.IMAGE, images=image, author=current_user)
+    post_image = ';'.join(image_urls)
+    print('富文本', content, post_image)
+    p = Post(body=content, body_html=None, type=PostType.IMAGE, images=post_image, author=current_user)
     db.session.add(p)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
