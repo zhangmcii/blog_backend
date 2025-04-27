@@ -404,6 +404,10 @@ def praise(id):
     if request.method == 'POST':
         # POST 请求需要 JWT 验证
         verify_jwt_in_request()
+        # 防止用户重复点赞
+        p = Praise.query.filter_by(author_id=current_user.id, post_id=id).first()
+        if p:
+            return jsonify(data='', msg='fail', detail='您已经点赞过了~')
         praise = Praise(post=post, author=current_user)
         db.session.add(praise)
         try:
