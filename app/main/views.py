@@ -18,7 +18,7 @@ from werkzeug.exceptions import TooManyRequests
 from ..event import *
 from flask_socketio import disconnect
 from flask_socketio import join_room, ConnectionRefusedError
-import qiniu
+from qiniu import Auth, BucketManager, build_batch_delete
 import time
 import os
 from ..utils.common import get_avatars_url
@@ -26,7 +26,10 @@ from ..utils.common import get_avatars_url
 """编辑资料、博客文章、关注者信息、评论信息"""
 
 manage_socket = ManageSocket()
-q = qiniu.Auth(os.getenv('QINIU_ACCESS_KEY'), os.getenv('QINIU_SECRET_KEY'))
+# 初始化Auth状态
+q = Auth(os.getenv('QINIU_ACCESS_KEY'), os.getenv('QINIU_SECRET_KEY'))
+# 初始化BucketManager
+bucket = BucketManager(q)
 
 
 @main.after_app_request
@@ -228,6 +231,7 @@ def can(perm):
 # --------------------------- 评论 ---------------------------
 @main.route('/post/<int:id>', methods=['POST'])
 @limiter.limit("1/second;3/minute", exempt_when=lambda: current_user.role_id == 3)
+@jwt_required()
 def post(id):
     """发布评论（适配direct_parent关系）"""
     post = Post.query.get_or_404(id)
@@ -590,6 +594,7 @@ def get_upload_token():
 
 @main.route('/get_signed_image_urls', methods=['POST'])
 def get_signed_image_urls():
+    """获取私有存储图片url(暂时没用上)"""
     data = request.get_json()
     keys = data.get('keys', [])
     if not keys:
@@ -607,24 +612,35 @@ def get_signed_image_urls():
     return jsonify({'signed_urls': signed_urls})
 
 
-@main.route('/upload_callback', methods=['POST'])
-def post_image():
-    data = request.get_json()
-    blog_text = data.get('blog_text', '')
-    file_name = data.get('filename')
-    print('收到回调通知', data)
-    return jsonify(data=data, msg='success', detail='')
+# @main.route('/upload_callback', methods=['POST'])
+# def post_image():
+#     data = request.get_json()
+#     blog_text = data.get('blog_text', '')
+#     file_name = data.get('filename')
+#     print('收到回调通知', data)
+#     return jsonify(data=data, msg='success', detail='')
 
 
 @main.route('/rich_post', methods=['POST'])
+@limiter.limit("2/day", exempt_when=lambda: current_user.role_id == 3)
 @jwt_required()
 def create_post():
     data = request.get_json()
     content = data.get('content', '')
     image_urls = data.get('imageUrls', [])
     post_image = ';'.join(image_urls)
-    print('富文本', content, post_image)
     p = Post(body=content, body_html=None, type=PostType.IMAGE, images=post_image, author=current_user)
     db.session.add(p)
     db.session.commit()
-    return jsonify(data='', msg='success', detail='')
+    return jsonify(data=[p.to_json()], msg='success', detail='')
+
+
+@main.route('/del_image', methods=['DELETE'])
+@jwt_required()
+def delete_image():
+    j = request.get_json()
+    bucket_name = j.get('bucket')
+    key = j.get('key', [])
+    ops = build_batch_delete(bucket_name, key)
+    ret, info = bucket.batch(ops)
+    return jsonify(data='', msg='', detail='')
