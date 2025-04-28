@@ -52,7 +52,7 @@ def edit_peofile():
     current_user.about_me = user_info.get('about_me')
     db.session.add(current_user)
     db.session.commit()
-    return jsonify(data='success')
+    return jsonify(msg='success')
 
 
 @main.route('/edit-profile/<int:id>', methods=['POST'])
@@ -72,7 +72,7 @@ def edit_peofile_admin(id):
 
     db.session.add(current_user)
     db.session.commit()
-    return jsonify(data='success')
+    return jsonify(msg='success')
 
 
 # --------------------------- 博客文章 ---------------------------
