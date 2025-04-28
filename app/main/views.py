@@ -3,7 +3,7 @@ import os
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token, verify_jwt_in_request
 from . import main
 from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType, \
-    Message, PostType
+    Message, PostType, Image, ImageType
 from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -11,6 +11,7 @@ from ..utils.time_util import DateUtils
 from ..utils.socket_util import ManageSocket
 from ..utils.text_filter import DFAFilter
 from flask_sqlalchemy import record_queries
+from sqlalchemy import and_
 from ..fake import Fake
 from .. import socketio
 from .. import limiter
@@ -641,10 +642,64 @@ def create_post():
 
 @main.route('/del_image', methods=['DELETE'])
 @jwt_required()
-def delete_image():
+def delete_qiniu_image():
     j = request.get_json()
     bucket_name = j.get('bucket')
     key = j.get('key', [])
     ops = build_batch_delete(bucket_name, key)
     ret, info = bucket.batch(ops)
     return jsonify(data='', msg='', detail='')
+
+
+@main.route('/user/<int:user_id>/interest_images')
+def get_favorite_book_image(user_id):
+    book_images = Image.query.filter(and_(Image.type == ImageType.BOOK, Image.related_id == user_id)).all()
+    return jsonify(data=[image.to_json() for image in book_images], msg='success', detail='')
+
+
+@main.route('/user/<int:user_id>/interest_images', methods=['POST'])
+def upload_favorite_book_image(user_id):
+    """上传兴趣封面"""
+    j = request.get_json()
+    interest_urls = j.get('urls', [])
+    interest_names = j.get('names', [])
+    type_url = None
+    if j.get('type') == 'movie':
+        type_url = ImageType.MOVIE
+    elif j.get('type') == 'book':
+        type_url = ImageType.BOOK
+    images = [Image(url=url, type=type_url, describe=name, related_id=user_id) for url, name in
+              zip(interest_urls, interest_names)]
+    if images:
+        db.session.add_all(images)
+        db.session.commit()
+    return jsonify(data=[image.to_json() for image in images], msg='success', detail=''), 201
+
+# @main.route('/article/<int:article_id>/upload_image', methods=['POST'])
+# def upload_article_image(article_id):
+#     image_url = request.get_json().get('image_url')  # 假设前端传来了图片URL
+#
+#     new_image = Image(
+#         url=image_url,
+#         type='article',
+#         related_id=article_id
+#     )
+#     db.session.add(new_image)
+#     db.session.commit()
+#
+#     return jsonify({'message': 'Article image uploaded successfully'}), 201
+#
+#
+# @main.route('/comment/<int:comment_id>/upload_image', methods=['POST'])
+# def upload_comment_image(comment_id):
+#     image_url = request.get_json().get('image_url')  # 假设前端传来了图片URL
+#
+#     new_image = Image(
+#         url=image_url,
+#         type='comment',
+#         related_id=comment_id
+#     )
+#     db.session.add(new_image)
+#     db.session.commit()
+#
+#     return jsonify({'message': 'Comment image uploaded successfully'}), 201

@@ -560,3 +560,35 @@ class Message(db.Model):
             'is_read': self.is_read,
         }
         return j
+
+class ImageType(Enum):
+    MOVIE='电影'
+    BOOK='书籍'
+    POST='文章'
+    COMMENT='评论'
+
+
+class Image(db.Model):
+    __tablename__ = 'images'
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(255), nullable=False)
+    # 当type等于movie，book时，需填写
+    describe = db.Column(db.String(64))
+    # 图片类型。比如 movie, book, post, comment
+    type = db.Column(db.Enum(ImageType))
+    # 关联的id。比如用户，文章，评论id
+    related_id = db.Column(db.Integer, nullable=False)
+    # 是否禁用（0：未禁用，1：已禁用）
+    disabled = db.Column(db.Boolean, default=False)
+    # 是否删除（0：未删除，1：已删除）
+    isDeleted = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
+
+
+
+    def to_json(self):
+        j = {
+
+        }
+        return j
+
