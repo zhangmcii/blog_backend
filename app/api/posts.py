@@ -1,10 +1,9 @@
 from flask import jsonify, request, url_for, current_app, abort
-from .. import db
-from ..models import Post, Permission
-from . import api
-from .decorators import permission_required
-from .errors import forbidden
 from flask_jwt_extended import current_user, jwt_required
+from .. import db
+from ..models import Post, Permission, PostType
+from . import api
+from ..main.views import del_qiniu_image
 
 
 @api.route('/posts/')
@@ -56,3 +55,25 @@ def edit_post(id):
     db.session.add(post)
     db.session.commit()
     return jsonify(data=post.to_json(), msg="success")
+
+
+@api.route('/posts/<int:id>', methods=['DELETE'])
+@jwt_required()
+def del_post(id):
+    # 删除文章，同时也要删除文章中的图片url
+    is_contain_image, data = None, None
+    try:
+        p = Post.query.filter_by(id=id, author_id=current_user.id).first()
+        is_contain_image = p.type == PostType.IMAGE
+        if is_contain_image:
+            # 删除图片
+            data = {'bucket_name': 'b-article', 'key': p.images.split(';') if p.images else []}
+        db.session.delete(p)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(data='', msg='fail', detail=str(e))
+    if is_contain_image:
+        # 传递j,执行图片删除
+        del_qiniu_image(**data)
+    return jsonify(data='', msg='success', detail='')

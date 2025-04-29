@@ -45,7 +45,7 @@ def after_request(response):
 # --------------------------- 编辑资料 ---------------------------
 @main.route('/edit-profile', methods=['POST'])
 @jwt_required()
-def edit_peofile():
+def edit_profile():
     user_info = request.get_json()
     current_user.nickname = user_info.get('nickname')
     current_user.location = user_info.get('location')
@@ -58,7 +58,7 @@ def edit_peofile():
 @main.route('/edit-profile/<int:id>', methods=['POST'])
 @jwt_required()
 @admin_required
-def edit_peofile_admin(id):
+def edit_profile_admin(id):
     user = User.query.get_or_404(id)
     user_info = request.get_json()
     user.email = user_info.get('email')
@@ -645,6 +645,10 @@ def delete_image():
     j = request.get_json()
     bucket_name = j.get('bucket')
     key = j.get('key', [])
+    del_qiniu_image(bucket_name, key)
+    return jsonify(data='', msg='success', detail='')
+
+
+def del_qiniu_image(bucket_name, key):
     ops = build_batch_delete(bucket_name, key)
-    ret, info = bucket.batch(ops)
-    return jsonify(data='', msg='', detail='')
+    bucket.batch(ops)
