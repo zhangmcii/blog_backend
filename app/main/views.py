@@ -670,10 +670,16 @@ def upload_favorite_book_image(user_id):
         type_url = ImageType.BOOK
     images = [Image(url=url, type=type_url, describe=name, related_id=user_id) for url, name in
               zip(interest_urls, interest_names)]
+    print('user_id', user_id)
+    print('urls', interest_urls)
+    print('names', interest_names)
     if images:
         db.session.add_all(images)
         db.session.commit()
-    return jsonify(data=[image.to_json() for image in images], msg='success', detail=''), 201
+    d = [image.to_json() for image in images]
+    print('d', d)
+    return jsonify(data=d, msg='success', detail=''), 201
+    # return jsonify(data=[image.to_json() for image in images], msg='success', detail=''), 201
 
 # @main.route('/article/<int:article_id>/upload_image', methods=['POST'])
 # def upload_article_image(article_id):

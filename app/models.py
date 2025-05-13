@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import timedelta
 from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -10,6 +11,7 @@ import random
 from . import redis
 from .exceptions import ValidationError
 from enum import Enum
+from sqlalchemy import and_
 
 
 class Permission:
@@ -302,6 +304,20 @@ class User(db.Model):
         post_praises = Praise.query.join(Post).filter(Post.author_id == self.id).count()
         comment_praises = Praise.query.join(Comment).filter(Comment.author_id == self.id).count()
         total_praises = post_praises + comment_praises
+        interest_images = Image.query.filter(
+            and_(Image.type.in_([ImageType.MOVIE, ImageType.BOOK]), Image.related_id == self.id)).order_by(
+            Image.id.asc()).all()
+        interest = defaultdict(list)
+        if interest_images:
+            for image in interest_images:
+                if image.type == ImageType.MOVIE:
+                    interest['movie'].append(image.to_json())
+                elif image.type == ImageType.BOOK:
+                    interest['book'].append(image.to_json())
+        else:
+            interest = {'movies':[], 'books':[]}
+        # interest = {'movies':movies.append() image.to_json() for image in interest_images } if interest_images else []
+        print('interest22', interest)
         json_user = {
             'url': url_for('api.get_user', id=self.id),
             'id': self.id,
@@ -334,7 +350,9 @@ class User(db.Model):
             'is_followed_by_current_user': self.is_followed_by(current_user) if current_user else self.is_followed_by(
                 user),
             # 是否关注了当前用户
-            'is_following_current_user': self.is_following(current_user) if current_user else self.is_following(user)
+            'is_following_current_user': self.is_following(current_user) if current_user else self.is_following(user),
+            'interest': interest
+
         }
         return json_user
 
@@ -561,11 +579,12 @@ class Message(db.Model):
         }
         return j
 
+
 class ImageType(Enum):
-    MOVIE='电影'
-    BOOK='书籍'
-    POST='文章'
-    COMMENT='评论'
+    MOVIE = '电影'
+    BOOK = '书籍'
+    POST = '文章'
+    COMMENT = '评论'
 
 
 class Image(db.Model):
@@ -584,11 +603,14 @@ class Image(db.Model):
     isDeleted = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=DateUtils.now_time)
 
-
-
     def to_json(self):
         j = {
-
+            'id': self.id,
+            'url': get_avatars_url(self.url),
+            'describe': self.describe,
+            'type': self.type.value,
+            'related_id': self.related_id,
+            'disabled': self.disabled,
+            'timestamp': self.timestamp
         }
         return j
-
