@@ -311,9 +311,9 @@ class User(db.Model):
         if interest_images:
             for image in interest_images:
                 if image.type == ImageType.MOVIE:
-                    interest['movie'].append(image.to_json())
+                    interest['movies'].append(image.to_json())
                 elif image.type == ImageType.BOOK:
-                    interest['book'].append(image.to_json())
+                    interest['books'].append(image.to_json())
         else:
             interest = {'movies':[], 'books':[]}
         # interest = {'movies':movies.append() image.to_json() for image in interest_images } if interest_images else []

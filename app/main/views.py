@@ -658,6 +658,7 @@ def get_favorite_book_image(user_id):
 
 
 @main.route('/user/<int:user_id>/interest_images', methods=['POST'])
+@jwt_required()
 def upload_favorite_book_image(user_id):
     """上传兴趣封面"""
     j = request.get_json()
@@ -666,6 +667,8 @@ def upload_favorite_book_image(user_id):
     type_url = None
     if j.get('type') == 'movie':
         type_url = ImageType.MOVIE
+        images = Image.query.filter(and_(Image.type == ImageType.MOVIE, Image.related_id == user_id)).all()
+        key = [image.url for image in images]
     elif j.get('type') == 'book':
         type_url = ImageType.BOOK
     images = [Image(url=url, type=type_url, describe=name, related_id=user_id) for url, name in
