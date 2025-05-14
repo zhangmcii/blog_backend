@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import timedelta
 from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -307,16 +306,13 @@ class User(db.Model):
         interest_images = Image.query.filter(
             and_(Image.type.in_([ImageType.MOVIE, ImageType.BOOK]), Image.related_id == self.id)).order_by(
             Image.id.asc()).all()
-        interest = defaultdict(list)
+        interest = {'movies':[], 'books':[]}
         if interest_images:
             for image in interest_images:
                 if image.type == ImageType.MOVIE:
                     interest['movies'].append(image.to_json())
                 elif image.type == ImageType.BOOK:
                     interest['books'].append(image.to_json())
-        else:
-            interest = {'movies':[], 'books':[]}
-        # interest = {'movies':movies.append() image.to_json() for image in interest_images } if interest_images else []
         print('interest22', interest)
         json_user = {
             'url': url_for('api.get_user', id=self.id),

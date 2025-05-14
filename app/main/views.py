@@ -645,13 +645,13 @@ def create_post():
 def delete_image():
     j = request.get_json()
     bucket_name = j.get('bucket')
-    key = j.get('key', [])
-    del_qiniu_image(bucket_name, key)
+    keys = j.get('key', [])
+    del_qiniu_image(keys, bucket_name)
     return jsonify(data='', msg='success', detail='')
 
 
-def del_qiniu_image(bucket_name, key):
-    ops = build_batch_delete(bucket_name, key)
+def del_qiniu_image(keys, bucket_name='b-article'):
+    ops = build_batch_delete(bucket_name, keys)
     bucket.batch(ops)
 
 
@@ -671,10 +671,16 @@ def upload_favorite_book_image(user_id):
     type_url = None
     if j.get('type') == 'movie':
         type_url = ImageType.MOVIE
-        images = Image.query.filter(and_(Image.type == ImageType.MOVIE, Image.related_id == user_id)).all()
-        key = [image.url for image in images]
     elif j.get('type') == 'book':
         type_url = ImageType.BOOK
+    # 删除上次上传的
+    last_upload_images = Image.query.filter(and_(Image.type == type_url, Image.related_id == user_id)).all()
+    if last_upload_images:
+        image_keys = [image.url for image in last_upload_images]
+        del_qiniu_image(image_keys)
+        for item in last_upload_images:
+            db.session.delete(item)
+        db.session.commit()
     images = [Image(url=url, type=type_url, describe=name, related_id=user_id) for url, name in
               zip(interest_urls, interest_names)]
     print('user_id', user_id)
@@ -685,8 +691,7 @@ def upload_favorite_book_image(user_id):
         db.session.commit()
     d = [image.to_json() for image in images]
     print('d', d)
-    return jsonify(data=d, msg='success', detail=''), 201
-    # return jsonify(data=[image.to_json() for image in images], msg='success', detail=''), 201
+    return jsonify(data=d, msg='success', detail=''), 200
 
 # @main.route('/article/<int:article_id>/upload_image', methods=['POST'])
 # def upload_article_image(article_id):
