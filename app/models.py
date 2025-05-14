@@ -216,8 +216,6 @@ class User(db.Model):
     @staticmethod
     def generate_code(email, expiration=60 * 3):
         code = random.randint(100000, 999999)
-        print('email', email)
-        print('code', code)
         redis.setex(email, expiration, code)
         return code
 
@@ -313,7 +311,6 @@ class User(db.Model):
                     interest['movies'].append(image.to_json())
                 elif image.type == ImageType.BOOK:
                     interest['books'].append(image.to_json())
-        print('interest22', interest)
         json_user = {
             'url': url_for('api.get_user', id=self.id),
             'id': self.id,

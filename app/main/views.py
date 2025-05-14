@@ -539,7 +539,6 @@ def online():
     for user_id in user_ids:
         u = User.query.get(user_id)
         users.append({'username': u.username, 'nickName': u.nickname})
-    print(users)
     online_total = len(users)
     return jsonify(data=users, msg='success', total=online_total)
 
@@ -550,7 +549,6 @@ def get_message_history():
     current_user_id = current_user.id
     other_user_id = request.args.get('userId')
     page = request.args.get('page', 1, type=int)
-    print('page:', page)
     query = Message.query.filter(
         ((Message.sender_id == current_user_id) & (Message.receiver_id == other_user_id)) |
         ((Message.sender_id == other_user_id) & (Message.receiver_id == current_user_id))
@@ -650,7 +648,7 @@ def delete_image():
     return jsonify(data='', msg='success', detail='')
 
 
-def del_qiniu_image(keys, bucket_name='b-article'):
+def del_qiniu_image(keys, bucket_name=os.getenv('QINIU_BUCKET_NAME')):
     ops = build_batch_delete(bucket_name, keys)
     bucket.batch(ops)
 
@@ -683,14 +681,10 @@ def upload_favorite_book_image(user_id):
         db.session.commit()
     images = [Image(url=url, type=type_url, describe=name, related_id=user_id) for url, name in
               zip(interest_urls, interest_names)]
-    print('user_id', user_id)
-    print('urls', interest_urls)
-    print('names', interest_names)
     if images:
         db.session.add_all(images)
         db.session.commit()
     d = [image.to_json() for image in images]
-    print('d', d)
     return jsonify(data=d, msg='success', detail=''), 200
 
 # @main.route('/article/<int:article_id>/upload_image', methods=['POST'])

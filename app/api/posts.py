@@ -1,3 +1,5 @@
+import os
+
 from flask import jsonify, request, url_for, current_app, abort
 from flask_jwt_extended import current_user, jwt_required
 from .. import db
@@ -67,7 +69,7 @@ def del_post(id):
         is_contain_image = p.type == PostType.IMAGE
         if is_contain_image:
             # 删除图片
-            data = {'bucket_name': 'b-article', 'key': p.images.split(';') if p.images else []}
+            data = {'bucket_name': os.getenv('QINIU_BUCKET_NAME',''), 'key': p.images.split(';') if p.images else []}
         db.session.delete(p)
         db.session.commit()
     except Exception as e:
