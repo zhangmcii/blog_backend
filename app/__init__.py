@@ -28,7 +28,7 @@ def create_app(config_name):
     # 跨域
     CORS(app)
 
-    # 执行celery启动命令时，需要加载环境变量
+    # 开发模式执行celery启动命令时，需要加载环境变量
     if not os.getenv('APP_RUN'):
         # 获取当前文件的绝对路径
         current_file_path = os.path.abspath(__file__)
