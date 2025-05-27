@@ -7,6 +7,8 @@ from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log,
 from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
+
+from ..mycelery.tasks import query_score
 from ..utils.time_util import DateUtils
 from ..utils.socket_util import ManageSocket
 from ..utils.text_filter import DFAFilter
@@ -687,6 +689,7 @@ def upload_favorite_book_image(user_id):
     d = [image.to_json() for image in images]
     return jsonify(data=d, msg='success', detail=''), 200
 
+
 # @main.route('/article/<int:article_id>/upload_image', methods=['POST'])
 # def upload_article_image(article_id):
 #     image_url = request.get_json().get('image_url')  # 假设前端传来了图片URL
@@ -715,3 +718,20 @@ def upload_favorite_book_image(user_id):
 #     db.session.commit()
 #
 #     return jsonify({'message': 'Comment image uploaded successfully'}), 201
+
+@main.route('/query/<int:user_id>')
+def query(user_id):
+    task = query_score.delay(user_id)
+    return jsonify(task_id=task.id)
+
+@main.route('/task/<task_id>')
+def get_task(task_id):
+    # 查询任务的结果
+    task = query_score.AsyncResult(task_id)
+    if task.state == 'SUCCESS':
+        print('success', task)
+        print('success11', task.result)
+        return jsonify(status=task.state, result=task.result)
+    else:
+        return jsonify(status=task.state)
+
