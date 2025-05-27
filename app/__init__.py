@@ -9,6 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from config import config
 from .mycelery import celery_init_app
+from dotenv import load_dotenv
 import os
 
 def my_key_func():
@@ -26,6 +27,18 @@ def create_app(config_name):
     app = Flask(__name__)
     # 跨域
     CORS(app)
+
+    # 执行celery启动命令时，需要加载环境变量
+    if not os.getenv('APP_RUN'):
+        # 获取当前文件的绝对路径
+        current_file_path = os.path.abspath(__file__)
+        # 获取当前文件所在目录的路径
+        current_dir_path = os.path.dirname(current_file_path)
+        # 获取父目录的路径
+        parent_dir_path = os.path.dirname(current_dir_path)
+        dotenv_path = os.path.join(parent_dir_path, '.env')
+        if os.path.exists(dotenv_path):
+            load_dotenv(dotenv_path)
 
     # 读取配置
     app.config.from_object(config[config_name])
