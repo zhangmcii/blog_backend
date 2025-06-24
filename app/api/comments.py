@@ -1,7 +1,4 @@
 from flask import jsonify, request, g, url_for, current_app
-from flask_jwt_extended import current_user
-from redis.cluster import command
-
 from .. import db
 from ..models import Post, Permission, Comment, Praise
 from . import api

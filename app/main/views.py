@@ -32,15 +32,15 @@ q = Auth(os.getenv('QINIU_ACCESS_KEY'), os.getenv('QINIU_SECRET_KEY'))
 # 初始化BucketManager
 bucket = BucketManager(q)
 
-
-@main.after_app_request
-def after_request(response):
-    for query in record_queries.get_recorded_queries():
-        if query.duration >= current_app.config['FLASKY_SLOW_DB_QUERY_TIME']:
-            current_app.logger.warning(
-                'Slow query: %s\nParameters: %s\nDuration: %fs\n'
-                % (query.statement, query.parameters, query.duration))
-    return response
+# 记录查询慢的sql
+# @main.after_app_request
+# def after_request(response):
+#     for query in record_queries.get_recorded_queries():
+#         if query.duration >= current_app.config['FLASKY_SLOW_DB_QUERY_TIME']:
+#             current_app.logger.warning(
+#                 'Slow query: %s\nParameters: %s\nDuration: %fs\n'
+#                 % (query.statement, query.parameters, query.duration))
+#     return response
 
 
 # --------------------------- 编辑资料 ---------------------------

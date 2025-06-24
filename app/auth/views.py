@@ -1,6 +1,4 @@
-import os
-
-from flask import request, jsonify, url_for
+from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, current_user
 from ..decorators import admin_required
 from . import auth
