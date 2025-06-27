@@ -112,9 +112,9 @@ def verify_token_in_websocket():
 def record_user_connect(user_id):
     """记录已连接的用户"""
     old_sids = socket_manager.user_socket.get(user_id, set())
-    for sid in old_sids:
-        print('断开旧连接：', sid)
+    for sid in list(old_sids):
         disconnect(sid)
+        socket_manager.remove_user_socket(sid)
     # 记录连接
     # 读取不了current_user.username。因为这不是http请求，无法应用jwt_required，所以读取不了current_user对象的属性
     socket_manager.add_user_socket(user_id, request.sid)

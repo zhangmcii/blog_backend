@@ -384,6 +384,8 @@ class Post(db.Model):
     body = db.Column(db.Text)
     body_html = db.Column(db.Text)
     type = db.Column(db.Enum(PostType))
+    # images字段已废弃。暂时不硬删除
+    images = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
