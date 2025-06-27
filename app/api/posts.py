@@ -55,6 +55,13 @@ def edit_post(id):
     post.body = j.get('body', post.body)
     post.body_html = j.get('bodyHtml') if j.get('bodyHtml') else None
     db.session.add(post)
+    # 编辑markdown文章时新增图片
+    images = j.get('images')
+    if images:
+        images = [
+            Image(url=image.get('url', ''), type=ImageType.POST, describe=image.get('pos', ''), related_id=post.id)
+            for image in images]
+        db.session.add_all(images)
     db.session.commit()
     return jsonify(data=post.to_json(), msg="success")
 
