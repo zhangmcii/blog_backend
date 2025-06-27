@@ -3,7 +3,7 @@ import os
 from flask import jsonify, request, url_for, current_app, abort
 from flask_jwt_extended import current_user, jwt_required
 from .. import db
-from ..models import Post, Permission, PostType
+from ..models import Post, Permission, Image, ImageType, PostType
 from . import api
 from ..main.views import del_qiniu_image
 
@@ -66,16 +66,22 @@ def del_post(id):
     is_contain_image, data = None, None
     try:
         p = Post.query.filter_by(id=id, author_id=current_user.id).first()
+        if not p:
+            return jsonify(data='', msg='fail', detail='文章不存在')
         is_contain_image = p.type == PostType.IMAGE
+        to_del_urls = []
         if is_contain_image:
+            post_images = Image.query.filter(Image.type == ImageType.POST, Image.related_id == p.id).order_by(
+                Image.id.asc()).all()
+            to_del_urls = [image.url for image in post_images]
             # 删除图片
-            data = {'bucket_name': os.getenv('QINIU_BUCKET_NAME',''), 'key': p.images.split(';') if p.images else []}
+            data = {'bucket_name': os.getenv('QINIU_BUCKET_NAME', ''), 'keys': to_del_urls}
         db.session.delete(p)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify(data='', msg='fail', detail=str(e))
-    if is_contain_image:
+    if is_contain_image and to_del_urls:
         # 传递j,执行图片删除
         del_qiniu_image(**data)
     return jsonify(data='', msg='success', detail='')

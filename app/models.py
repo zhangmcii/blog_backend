@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -304,7 +305,7 @@ class User(db.Model):
         interest_images = Image.query.filter(
             and_(Image.type.in_([ImageType.MOVIE, ImageType.BOOK]), Image.related_id == self.id)).order_by(
             Image.id.asc()).all()
-        interest = {'movies':[], 'books':[]}
+        interest = {'movies': [], 'books': []}
         if interest_images:
             for image in interest_images:
                 if image.type == ImageType.MOVIE:
@@ -383,7 +384,6 @@ class Post(db.Model):
     body = db.Column(db.Text)
     body_html = db.Column(db.Text)
     type = db.Column(db.Enum(PostType))
-    images = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
@@ -392,12 +392,29 @@ class Post(db.Model):
     notifications = db.relationship('Notification', backref='post', lazy='dynamic')
 
     def to_json(self):
+        urls, pos = [], []
+        replaced_body_html = self.body_html
+        if self.type == PostType.IMAGE:
+            # 查询图文或者markdown类型的文章图像
+            post_images = Image.query.filter(Image.type == ImageType.POST, Image.related_id == self.id).order_by(
+                Image.id.asc()).all()
+            urls = [get_avatars_url(image.url) for image in post_images]
+            if self.body_html:
+                # 图片对应的位置信息
+                pos = [image.describe for image in post_images]
+                # 正则替换html中的<img>标签
+                replaced_body_html = Post.replace_img_src(self.body_html, pos, urls)
+
+        # 提取url和pos字段
         json_post = {
             'url': url_for('api.get_post', id=self.id),
             'id': self.id,
             'body': self.body,
-            'body_html': self.body_html,
-            'post_images': self.images.split(';') if self.images else [],
+            'body_html': replaced_body_html,
+            # 非markdown类型，才会给post_images赋值
+            'post_images': urls if not self.body_html else [],
+            # markdown图片的位置
+            'pos': pos,
             'post_type': self.type.value,
             'timestamp': self.timestamp if isinstance(self.timestamp, str) else DateUtils.datetime_to_str(
                 self.timestamp),
@@ -416,6 +433,24 @@ class Post(db.Model):
         if body is None or body == '':
             raise ValidationError('post does not have a body')
         return Post(body=body)
+
+    @staticmethod
+    def replace_img_src(html, pos, image_urls):
+        pos2url = {str(_pos): _url for _pos, _url in zip(pos, image_urls)}
+
+        def replacer(match):
+            src = match.group(1)
+            alt = match.group(2)
+            url = pos2url.get(src)
+            if url:
+                return f'<img src="{url}" alt="{alt}">'
+            else:
+                # 不替换
+                return match.group(0)
+
+        # 匹配 <img src="数字" alt="xxx">，支持前后有其他内容
+        pattern = re.compile(r'<img\s+src="(\d+)"\s+alt="([^"]*)">')
+        return pattern.sub(replacer, html)
 
 
 class Comment(db.Model):
@@ -584,9 +619,9 @@ class Image(db.Model):
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(255), nullable=False)
-    # 当type等于movie，book时，需填写
+    # 当type等于movie，book, post(markdown)时，需填写
     describe = db.Column(db.String(64))
-    # 图片类型。比如 movie, book, post, comment
+    # 图片类型。比如 movie, book, post, comment, markdown
     type = db.Column(db.Enum(ImageType))
     # 关联的id。比如用户，文章，评论id
     related_id = db.Column(db.Integer, nullable=False)

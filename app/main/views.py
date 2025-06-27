@@ -32,6 +32,7 @@ q = Auth(os.getenv('QINIU_ACCESS_KEY'), os.getenv('QINIU_SECRET_KEY'))
 # 初始化BucketManager
 bucket = BucketManager(q)
 
+
 # 记录查询慢的sql
 # @main.after_app_request
 # def after_request(response):
@@ -84,9 +85,17 @@ def index():
     if request.method == 'POST' and current_user.can(Permission.WRITE):
         j = request.get_json()
         body_html = j.get('bodyHtml')
-        post = Post(body=j.get('body'), body_html=body_html if body_html else None, type=PostType.TEXT,
+        images = j.get('images')
+        post = Post(body=j.get('body'), body_html=body_html if body_html else None,
+                    type=PostType.IMAGE if body_html else PostType.TEXT,
                     author=current_user)
         db.session.add(post)
+        db.session.flush()
+        if images:
+            images = [
+                Image(url=image.get('url', ''), type=ImageType.POST, describe=image.get('pos', ''), related_id=post.id)
+                for image in images]
+            db.session.add_all(images)
         db.session.commit()
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', current_app.config['FLASKY_POSTS_PER_PAGE'], type=int)
@@ -631,9 +640,11 @@ def create_post():
     data = request.get_json()
     content = data.get('content', '')
     image_urls = data.get('imageUrls', [])
-    post_image = ';'.join(image_urls)
-    p = Post(body=content, body_html=None, type=PostType.IMAGE, images=post_image, author=current_user)
+    p = Post(body=content, body_html=None, type=PostType.IMAGE, author=current_user)
     db.session.add(p)
+    db.session.flush()
+    images = [Image(url=url, type=ImageType.POST, related_id=p.id) for url in image_urls]
+    db.session.add_all(images)
     db.session.commit()
     return jsonify(data=[p.to_json()], msg='success', detail='')
 
