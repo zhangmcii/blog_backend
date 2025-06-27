@@ -393,7 +393,8 @@ class Post(db.Model):
 
     def to_json(self):
         urls, pos = [], []
-        replaced_body_html = self.body_html
+        body = self.body
+        body_html = self.body_html
         if self.type == PostType.IMAGE:
             # 查询图文或者markdown类型的文章图像
             post_images = Image.query.filter(Image.type == ImageType.POST, Image.related_id == self.id).order_by(
@@ -403,14 +404,15 @@ class Post(db.Model):
                 # 图片对应的位置信息
                 pos = [image.describe for image in post_images]
                 # 正则替换html中的<img>标签
-                replaced_body_html = Post.replace_img_src(self.body_html, pos, urls)
+                body = Post.replace_body(self.body, pos, urls)
+                body_html = Post.replace_body_html(self.body_html, pos, urls)
 
         # 提取url和pos字段
         json_post = {
             'url': url_for('api.get_post', id=self.id),
             'id': self.id,
-            'body': self.body,
-            'body_html': replaced_body_html,
+            'body': body,
+            'body_html': body_html,
             # 非markdown类型，才会给post_images赋值
             'post_images': urls if not self.body_html else [],
             # markdown图片的位置
@@ -435,7 +437,7 @@ class Post(db.Model):
         return Post(body=body)
 
     @staticmethod
-    def replace_img_src(html, pos, image_urls):
+    def replace_body_html(html, pos, image_urls):
         pos2url = {str(_pos): _url for _pos, _url in zip(pos, image_urls)}
 
         def replacer(match):
@@ -451,6 +453,23 @@ class Post(db.Model):
         # 匹配 <img src="数字" alt="xxx">，支持前后有其他内容
         pattern = re.compile(r'<img\s+src="(\d+)"\s+alt="([^"]*)">')
         return pattern.sub(replacer, html)
+
+    @staticmethod
+    def replace_body(content, pos, image_urls):
+        pos2url = {str(_pos): _url for _pos, _url in zip(pos, image_urls)}
+
+        # 匹配 ![xxx](数字)
+        def replacer(match):
+            alt = match.group(1)
+            pos = match.group(2)
+            url = pos2url.get(pos)
+            if url:
+                return f'![{alt}]({url})'
+            else:
+                return match.group(0)
+
+        pattern = re.compile(r'!\[([^\]]*)\]\((\d+)\)')
+        return pattern.sub(replacer, content)
 
 
 class Comment(db.Model):
