@@ -133,6 +133,16 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(64), unique=True, index=True)
+    social_account = db.Column(db.JSON, default=lambda: {
+        'github': None,
+        'qq': None,
+        'wechat': None,
+        'bilibili': None,
+        'twitter': None,
+        'tiktok': None,
+        'rednote': None,
+        'email': None
+    })
     username = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(255))
     confirmed = db.Column(db.Boolean, default=False)
@@ -146,6 +156,8 @@ class User(db.Model):
     image = db.Column(db.String(255))
     # 图像
     avatar_hash = db.Column(db.String(32))
+    # secondary参数必须设置为关联表
+    tags = db.relationship('Tag', secondary='user_tag', backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
 
     posts = db.relationship('Post', backref='author', lazy='dynamic')
 
@@ -345,8 +357,9 @@ class User(db.Model):
                 user),
             # 是否关注了当前用户
             'is_following_current_user': self.is_following(current_user) if current_user else self.is_following(user),
-            'interest': interest
-
+            'interest': interest,
+            'social_account': self.social_account,
+            'tags': [tag.name for tag in self.tags]
         }
         return json_user
 
@@ -663,3 +676,22 @@ class Image(db.Model):
             'timestamp': self.timestamp
         }
         return j
+
+
+# 用户tagb标签。 与用户是 多对多关系
+class Tag(db.Model):
+    __tablename__ = 'tag'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(16), unique=True, nullable=False)
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'name': self.name
+        }
+
+
+user_tag = db.Table('user_tag',
+                    db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
+                    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'))
+                    )

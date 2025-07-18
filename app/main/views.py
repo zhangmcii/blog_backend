@@ -3,7 +3,7 @@ import os
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity, decode_token, verify_jwt_in_request
 from . import main
 from ..models import User, Role, Post, Permission, Comment, Follow, Praise, Log, Notification, NotificationType, \
-    Message, PostType, Image, ImageType
+    Message, PostType, Image, ImageType, Tag
 from ..decorators import permission_required, admin_required, log_operate
 from .. import db
 from flask import jsonify, current_app, request, abort, url_for, redirect
@@ -698,6 +698,7 @@ def upload_favorite_book_image(user_id):
     d = [image.to_json() for image in images]
     return jsonify(data=d, msg='success', detail=''), 200
 
+
 # @main.route('/article/<int:article_id>/upload_image', methods=['POST'])
 # def upload_article_image(article_id):
 #     image_url = request.get_json().get('image_url')  # 假设前端传来了图片URL
@@ -726,3 +727,35 @@ def upload_favorite_book_image(user_id):
 #     db.session.commit()
 #
 #     return jsonify({'message': 'Comment image uploaded successfully'}), 201
+
+@main.route('/tags_list')
+def get_all_tags():
+    tags = Tag.query.all()
+    return jsonify(data=[tag.name for tag in tags], msg='success', detail='')
+
+
+@main.route('/update_user_tag', methods=['POST'])
+@jwt_required()
+def edit_user_tag():
+    d = request.get_json()
+    tag_add = set(d.get('tagAdd', []))
+    tag_remove = set(d.get('tagRemove', []))
+    # 添加新的标签
+    for tag_name in tag_add:
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if not tag:
+            tag = Tag(name=tag_name)
+            db.session.add(tag)
+        current_user.tags.append(tag)
+
+    # 删除被移除的标签
+    for tag_name in tag_remove:
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if tag:
+            current_user.tags.remove(tag)
+    db.session.commit()
+    return jsonify(data='', msg='success', detail='')
+
+
+
+
