@@ -133,6 +133,23 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(64), unique=True, index=True)
+    username = db.Column(db.String(64), unique=True, index=True)
+    password_hash = db.Column(db.String(255))
+    confirmed = db.Column(db.Boolean, default=False)
+    # 用户资料
+    nickname = db.Column(db.String(64))
+    location = db.Column(db.String(64))
+    # 签名
+    about_me = db.Column(db.Text())
+    # 存储男或女，允许为空
+    sex = db.Column(db.String(10), nullable=True)
+    # 个人资料背景图片
+    bg_image = db.Column(db.String(255), nullable=True)
+    member_since = db.Column(db.DateTime(), default=DateUtils.now_time)
+    last_seen = db.Column(db.DateTime(), default=DateUtils.now_time)
+    # 用户图像
+    image = db.Column(db.String(255))
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     social_account = db.Column(db.JSON, default=lambda: {
         'github': None,
         'qq': None,
@@ -143,19 +160,6 @@ class User(db.Model):
         'rednote': None,
         'email': None
     })
-    username = db.Column(db.String(64), unique=True, index=True)
-    password_hash = db.Column(db.String(255))
-    confirmed = db.Column(db.Boolean, default=False)
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
-    # 用户资料
-    nickname = db.Column(db.String(64))
-    location = db.Column(db.String(64))
-    about_me = db.Column(db.Text())
-    member_since = db.Column(db.DateTime(), default=DateUtils.now_time)
-    last_seen = db.Column(db.DateTime(), default=DateUtils.now_time)
-    image = db.Column(db.String(255))
-    # 图像
-    avatar_hash = db.Column(db.String(32))
     # secondary参数必须设置为关联表
     tags = db.relationship('Tag', secondary='user_tag', backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
 
