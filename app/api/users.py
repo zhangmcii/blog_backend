@@ -1,7 +1,7 @@
 from flask import jsonify, request, current_app, url_for
 from . import api
 from ..models import User, Post, Follow
-from flask_jwt_extended import current_user
+from flask_jwt_extended import current_user, jwt_required
 from .. import db
 from ..utils.common import get_avatars_url
 
@@ -101,3 +101,13 @@ def search_fan():
     follows = [{'username': item.username, 'image': get_avatars_url(item.image)}
                for item in followed_users if item.username != user.username]
     return jsonify(data=follows, msg='success')
+
+
+@api.route('/update_user', methods=['POST'])
+@jwt_required()
+def update_user_profile():
+    for key, value in request.json.items():
+        if hasattr(current_user, key):
+            setattr(current_user, key, value)
+    db.session.commit()
+    return jsonify(data='', msg='success', detail='')

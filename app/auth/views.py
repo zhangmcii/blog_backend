@@ -27,7 +27,6 @@ def login():
         token = create_access_token(identity=user, expires_delta=False)
         user.ping()
         u = {
-            'token': 'Bearer ' + token,
             'id': user.id,
             'username': user.username,
             'nickname': user.nickname,
@@ -45,7 +44,7 @@ def login():
                          user.followed.order_by(Follow.timestamp.desc()).all() if
                          item.followed.username != user.username],
         }
-        return jsonify(data=u, msg="success", detail=''), 200
+        return jsonify(data=u, token='Bearer ' + token, msg="success", detail=''), 200
     return jsonify(data='', msg="fail", detail='账号或密码错误')
 
 

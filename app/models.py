@@ -335,6 +335,8 @@ class User(db.Model):
             'nickname': self.nickname,
             'location': self.location,
             'about_me': self.about_me,
+            'sex': self.sex,
+            'bg_image': self.bg_image,
             'member_since': self.member_since if isinstance(self.member_since, str) else DateUtils.datetime_to_str(
                 self.member_since),
             'last_seen': self.last_seen if isinstance(self.last_seen, str) else DateUtils.datetime_to_str(
