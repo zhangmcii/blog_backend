@@ -615,7 +615,7 @@ def get_signed_image_urls():
     for key in keys:
         # 添加图片瘦身参数，这里以调整图片质量为 80 为例
         fops = 'imageMogr2/quality/80'
-        base_url = f'http://{os.getenv('QINIU_DOMAIN')}/{key}'
+        base_url = f'{os.getenv('QINIU_DOMAIN')}/{key}'
         # 拼接处理参数到基础 URL
         processed_url = base_url + '?' + fops
         # 生成带处理参数的签名 URL
