@@ -122,16 +122,20 @@ def user(username):
         page=page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'],
         error_out=False)
     posts = pagination.items
+    return jsonify(posts=[post.to_json() for post in posts], total=user.posts.count(), msg='success')
+
+@main.route('/users/<username>')
+@jwt_required(optional=True)
+def get_user_by_username(username):
+    """根据用户名获取用户数据"""
+    user = User.query.filter_by(username=username).first()
     # 如果登录的用户时管理员，则会携带 电子邮件地址
     if current_user and current_user.is_administrator():
-        return jsonify(data=user.to_json(user), posts=[post.to_json() for post in posts], total=user.posts.count(),
-                       msg='success')
+        return jsonify(data=user.to_json(user),msg='success')
     j = user.to_json(user)
     j.pop('email', None)
-    # j.pop('role', None)
     j.pop('confirmed', None)
-    return jsonify(data=j, posts=[post.to_json() for post in posts], total=user.posts.count(), msg='success')
-
+    return jsonify(data=j, msg='success')
 
 @main.route('/edit/<int:id>', methods=['GET', 'PUT'])
 @jwt_required()
