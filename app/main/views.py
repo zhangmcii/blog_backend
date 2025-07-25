@@ -688,7 +688,7 @@ def query_qiniu_key():
     ret, eof, info = bucket.list(bucket_name, prefix, marker, limit, delimiter)
     j = json.loads(info.text_body)
     item_list = j.get('items')
-    return jsonify(data=[item.get('key') for item in item_list[1:]], msg='success', detail='')
+    return jsonify(data=[get_avatars_url(item.get('key')) for item in item_list[1:]], msg='success', detail='')
 
 
 @main.route('/user/<int:user_id>/interest_images')
