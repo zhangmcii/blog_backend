@@ -22,6 +22,7 @@ from flask_socketio import join_room, ConnectionRefusedError
 from qiniu import Auth, BucketManager, build_batch_delete
 import time
 import os
+import json
 from ..utils.common import get_avatars_url
 
 """编辑资料、博客文章、关注者信息、评论信息"""
@@ -124,6 +125,7 @@ def user(username):
     posts = pagination.items
     return jsonify(posts=[post.to_json() for post in posts], total=user.posts.count(), msg='success')
 
+
 @main.route('/users/<username>')
 @jwt_required(optional=True)
 def get_user_by_username(username):
@@ -131,11 +133,12 @@ def get_user_by_username(username):
     user = User.query.filter_by(username=username).first()
     # 如果登录的用户时管理员，则会携带 电子邮件地址
     if current_user and current_user.is_administrator():
-        return jsonify(data=user.to_json(user),msg='success')
+        return jsonify(data=user.to_json(user), msg='success')
     j = user.to_json(user)
     j.pop('email', None)
     j.pop('confirmed', None)
     return jsonify(data=j, msg='success')
+
 
 @main.route('/edit/<int:id>', methods=['GET', 'PUT'])
 @jwt_required()
@@ -668,6 +671,26 @@ def del_qiniu_image(keys, bucket_name=os.getenv('QINIU_BUCKET_NAME')):
     bucket.batch(ops)
 
 
+@main.route('/dir_name')
+@jwt_required()
+def query_qiniu_key():
+    """查询七牛云某个bucket指定目录的所有文件名"""
+    # 前缀
+    prefix = request.args.get('prefix', 'userBackground/static')
+    # 列举条目
+    limit = request.args.get('limit', 6)
+    # bucket名字
+    bucket_name = request.args.get('bucket', os.getenv('QINIU_BUCKET_NAME'))
+    # 列举出除'/'的所有文件以及以'/'为分隔的所有前缀
+    delimiter = None
+    # 标记
+    marker = None
+    ret, eof, info = bucket.list(bucket_name, prefix, marker, limit, delimiter)
+    j = json.loads(info.text_body)
+    item_list = j.get('items')
+    return jsonify(data=[item.get('key') for item in item_list[1:]], msg='success', detail='')
+
+
 @main.route('/user/<int:user_id>/interest_images')
 def get_favorite_book_image(user_id):
     book_images = Image.query.filter(and_(Image.type == ImageType.BOOK, Image.related_id == user_id)).all()
@@ -759,7 +782,3 @@ def edit_user_tag():
             current_user.tags.remove(tag)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
-
-
-
-
