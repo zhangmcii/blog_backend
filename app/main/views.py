@@ -672,13 +672,14 @@ def del_qiniu_image(keys, bucket_name=os.getenv('QINIU_BUCKET_NAME')):
 
 
 @main.route('/dir_name')
-@jwt_required()
 def query_qiniu_key():
     """查询七牛云某个bucket指定目录的所有文件名"""
     # 前缀
     prefix = request.args.get('prefix', 'userBackground/static')
+    current_page = int(request.args.get('currentPage', 1))
+    page_size = int(request.args.get('pageSize', 6))
     # 列举条目
-    limit = request.args.get('limit', 6)
+    limit = 50
     # bucket名字
     bucket_name = request.args.get('bucket', os.getenv('QINIU_BUCKET_NAME'))
     # 列举出除'/'的所有文件以及以'/'为分隔的所有前缀
@@ -688,7 +689,12 @@ def query_qiniu_key():
     ret, eof, info = bucket.list(bucket_name, prefix, marker, limit, delimiter)
     j = json.loads(info.text_body)
     item_list = j.get('items')
-    return jsonify(data=[get_avatars_url(item.get('key')) for item in item_list[1:]], msg='success', detail='')
+
+    start = (current_page - 1) * page_size
+    end = start + page_size
+    # 第一个元素丢弃
+    return jsonify(data=[get_avatars_url(item.get('key')) for item in item_list[start + 1:end + 1]],
+                   total=len(item_list) - 1, msg='success', detail='')
 
 
 @main.route('/user/<int:user_id>/interest_images')
