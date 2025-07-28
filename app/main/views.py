@@ -98,6 +98,7 @@ def index():
                 for image in images]
             db.session.add_all(images)
         db.session.commit()
+        new_post_notification(post.id)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', current_app.config['FLASKY_POSTS_PER_PAGE'], type=int)
     if request.args.get('tabName') == 'showFollowed':
@@ -109,6 +110,49 @@ def index():
                                                               error_out=False)
     posts = paginate.items
     return jsonify(data=[post.to_json() for post in posts], total=query.count(), msg='success')
+
+
+def new_post_notification(post_id):
+    # 查询当前用户的所有粉丝（排除自己）
+    followers = Follow.query.filter_by(followed_id=current_user.id).all()
+
+    # 为每个粉丝创建通知并推送
+    for follow in followers:
+        # 跳过作者自己（虽然逻辑上自己不会关注自己，但以防万一）
+        if follow.follower_id == current_user.id:
+            continue
+
+        # 创建通知
+        notification = Notification(
+            receiver_id=follow.follower_id,  # 粉丝ID
+            trigger_user_id=current_user.id,  # 触发用户（作者）
+            post_id=post_id,  # 关联文章ID
+            type=NotificationType.NewPost  # 通知类型：新文章
+        )
+        db.session.add(notification)
+        db.session.flush()  # 刷新以获取通知ID
+
+        # 实时推送给粉丝
+        socketio.emit(
+            'new_notification',
+            notification.to_json(),
+            to=str(follow.follower_id)  # 发送到粉丝的房间
+        )
+
+    # 提交所有通知
+    db.session.commit()
+
+
+def get_user_posts(username, page=1):
+    """获取用户文章的公共逻辑"""
+    user = User.query.filter_by(username=username).first()
+    # 如果登录的用户时管理员，则会携带 电子邮件地址
+    if current_user and current_user.is_administrator():
+        return jsonify(data=user.to_json(user), msg='success')
+    j = user.to_json(user)
+    j.pop('email', None)
+    j.pop('confirmed', None)
+    return j
 
 
 @main.route('/user/<username>')
@@ -130,14 +174,8 @@ def user(username):
 @jwt_required(optional=True)
 def get_user_by_username(username):
     """根据用户名获取用户数据"""
-    user = User.query.filter_by(username=username).first()
-    # 如果登录的用户时管理员，则会携带 电子邮件地址
-    if current_user and current_user.is_administrator():
-        return jsonify(data=user.to_json(user), msg='success')
-    j = user.to_json(user)
-    j.pop('email', None)
-    j.pop('confirmed', None)
-    return jsonify(data=j, msg='success')
+    data = get_user_posts(username)
+    return jsonify(data=data, msg='success')
 
 
 @main.route('/edit/<int:id>', methods=['GET', 'PUT'])
@@ -170,7 +208,8 @@ def follow(username):
         return jsonify(data='fail', msg="你已经关注了该用户")
     current_user.follow(user)
     db.session.commit()
-    return redirect(url_for('.user', username=username))
+    data = get_user_posts(username)
+    return jsonify(data=data, msg='success')
 
 
 @main.route('/unfollow/<username>')
@@ -184,7 +223,8 @@ def unfollow(username):
         return jsonify(data='fail', msg="你未关注该用户")
     current_user.unfollow(user)
     db.session.commit()
-    return redirect(url_for('.user', username=username))
+    data = get_user_posts(username)
+    return jsonify(data=data, msg='success')
 
 
 @main.route('/followers/<username>')

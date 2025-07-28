@@ -92,6 +92,7 @@ class NotificationType(Enum):
     REPLY = "回复"
     LIKE = '点赞'
     CHAT = '私信'
+    NewPost = '新文章'
 
 
 class Notification(db.Model):
