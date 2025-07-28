@@ -678,6 +678,7 @@ def query_qiniu_key():
     prefix = request.args.get('prefix', 'userBackground/static')
     current_page = int(request.args.get('currentPage', 1))
     page_size = int(request.args.get('pageSize', 6))
+    complete_url = bool(int(request.args.get('completeUrl', True)))
     # 列举条目
     limit = 50
     # bucket名字
@@ -693,7 +694,8 @@ def query_qiniu_key():
     start = (current_page - 1) * page_size
     end = start + page_size
     # 第一个元素丢弃
-    return jsonify(data=[get_avatars_url(item.get('key')) for item in item_list[start + 1:end + 1]],
+    return jsonify(data=[get_avatars_url(item.get('key')) if complete_url else item.get('key') for item in
+                         item_list[start + 1:end + 1]],
                    total=len(item_list) - 1, msg='success', detail='')
 
 
