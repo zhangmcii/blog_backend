@@ -148,7 +148,7 @@ def get_user_posts(username, page=1):
     user = User.query.filter_by(username=username).first()
     # 如果登录的用户时管理员，则会携带 电子邮件地址
     if current_user and current_user.is_administrator():
-        return jsonify(data=user.to_json(user), msg='success')
+        return user.to_json(user)
     j = user.to_json(user)
     j.pop('email', None)
     j.pop('confirmed', None)
