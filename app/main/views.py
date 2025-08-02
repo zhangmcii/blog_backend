@@ -712,6 +712,7 @@ def del_qiniu_image(keys, bucket_name=os.getenv('QINIU_BUCKET_NAME')):
 
 
 @main.route('/dir_name')
+@jwt_required()
 def query_qiniu_key():
     """查询七牛云某个bucket指定目录的所有文件名"""
     # 前缀
