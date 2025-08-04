@@ -9,7 +9,7 @@ from ..utils.common import get_avatars_url
 @api.route('/users/<int:id>')
 def get_user(id):
     user = User.query.get_or_404(id)
-    return jsonify(data=user.to_json(None), msg='success')
+    return jsonify(data=user.to_json(), msg='success')
 
 
 @api.route('/users/<int:id>/posts/')
