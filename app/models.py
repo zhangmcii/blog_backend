@@ -315,7 +315,7 @@ class User(db.Model):
         m = Message(sender=self, receiver=user, content=content)
         db.session.add(m)
 
-    def to_json(self, user):
+    def to_json(self):
         post_praises = Praise.query.join(Post).filter(Post.author_id == self.id).count()
         comment_praises = Praise.query.join(Comment).filter(Comment.author_id == self.id).count()
         total_praises = post_praises + comment_praises
@@ -330,7 +330,8 @@ class User(db.Model):
                 elif image.type == ImageType.BOOK:
                     interest['books'].append(image.to_json())
         json_user = {
-            'url': url_for('api.get_user', id=self.id),
+            # 后端接口
+            # 'url': url_for('api.get_user', id=self.id),
             'id': self.id,
             'username': self.username,
             'nickname': self.nickname,
@@ -360,10 +361,9 @@ class User(db.Model):
             # 获赞数量(文章+评论获赞)
             'praised_count': total_praises,
             # 是否被当前用户关注
-            'is_followed_by_current_user': self.is_followed_by(current_user) if current_user else self.is_followed_by(
-                user),
+            'is_followed_by_current_user': self.is_followed_by(current_user) if current_user else False,
             # 是否关注了当前用户
-            'is_following_current_user': self.is_following(current_user) if current_user else self.is_following(user),
+            'is_following_current_user': self.is_following(current_user) if current_user else False,
             'interest': interest,
             'social_account': self.social_account,
             'tags': [tag.name for tag in self.tags]

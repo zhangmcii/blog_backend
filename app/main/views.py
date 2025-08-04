@@ -143,13 +143,13 @@ def new_post_notification(post_id):
     db.session.commit()
 
 
-def get_user_posts(username, page=1):
-    """获取用户文章的公共逻辑"""
+def get_user_data(username):
+    """获取用户数据的公共逻辑"""
     user = User.query.filter_by(username=username).first()
     # 如果登录的用户时管理员，则会携带 电子邮件地址
     if current_user and current_user.is_administrator():
-        return user.to_json(user)
-    j = user.to_json(user)
+        return user.to_json()
+    j = user.to_json()
     j.pop('email', None)
     j.pop('confirmed', None)
     return j
@@ -174,7 +174,7 @@ def user(username):
 @jwt_required(optional=True)
 def get_user_by_username(username):
     """根据用户名获取用户数据"""
-    data = get_user_posts(username)
+    data = get_user_data(username)
     return jsonify(data=data, msg='success')
 
 
@@ -208,7 +208,7 @@ def follow(username):
         return jsonify(data='fail', msg="你已经关注了该用户")
     current_user.follow(user)
     db.session.commit()
-    data = get_user_posts(username)
+    data = get_user_data(username)
     return jsonify(data=data, msg='success')
 
 
@@ -223,7 +223,7 @@ def unfollow(username):
         return jsonify(data='fail', msg="你未关注该用户")
     current_user.unfollow(user)
     db.session.commit()
-    data = get_user_posts(username)
+    data = get_user_data(username)
     return jsonify(data=data, msg='success')
 
 
