@@ -6,7 +6,13 @@ function backend_to_remote() {
       rm -f $backend_tar
       echo "已删除 $backend_tar"
     fi
-    docker build -t nizhenshi/flasky_backend .
+
+    # mac芯片为M4，指定平台为 linux/amd64
+    if sysctl -n machdep.cpu.brand_string | grep -q "Apple"; then
+      docker build --platform linux/amd64 -t nizhenshi/flasky_backend .
+    else
+      docker build -t nizhenshi/flasky_backend .
+    fi
     docker save -o flasky_backend.tar nizhenshi/flasky_backend
 
     LOCAL_FILE=$backend_tar

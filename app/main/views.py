@@ -830,3 +830,23 @@ def edit_user_tag():
             current_user.tags.remove(tag)
     db.session.commit()
     return jsonify(data='', msg='success', detail='')
+
+
+@main.route("/add_tag", methods=["POST"])
+def add_tag():
+    d = request.json
+    tags = d.get("tags", [])
+    t = [Tag(name=tag) for tag in tags if tag]
+    db.session.add_all(t)
+    db.session.commit()
+    return jsonify(data="", msg="success", detail="")
+
+
+@main.route("/del_tag", methods=["DELETE"])
+def del_tag():
+    d = request.json
+    tags = d.get("tags", [])
+    if tags:
+        Tag.query.filter(Tag.name.in_(tags)).delete()
+        db.session.commit()
+    return jsonify(data='', msg='success')
