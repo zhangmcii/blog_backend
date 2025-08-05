@@ -1,10 +1,15 @@
 import os
 from dotenv import load_dotenv
+from app.utils.common import get_local_ip
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 print(dotenv_path)
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
+
+# 开发环境自动获取本地地址
+if os.getenv('FLASK_DEBUG'):
+    os.environ["FLASK_RUN_HOST"] = get_local_ip()
 
 COV = None
 if os.environ.get('FLASK_COVERAGE'):
@@ -89,6 +94,7 @@ def deploy():
 def add(some):
     print(some)
 
+
 if __name__ == '__main__':
     print('正在启动')
-    socketio.run(app, host=os.getenv('FLASK_RUN_HOST'), port=os.getenv('FLASK_RUN_PORT') ,debug=True)
+    socketio.run(app, host=os.getenv('FLASK_RUN_HOST'), port=os.getenv('FLASK_RUN_PORT'))
