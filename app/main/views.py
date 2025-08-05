@@ -812,6 +812,7 @@ def get_all_tags():
 @main.route('/update_user_tag', methods=['POST'])
 @jwt_required()
 def edit_user_tag():
+    """更新当前用户标签"""
     d = request.get_json()
     tag_add = set(d.get('tagAdd', []))
     tag_remove = set(d.get('tagRemove', []))
@@ -832,21 +833,24 @@ def edit_user_tag():
     return jsonify(data='', msg='success', detail='')
 
 
-@main.route("/add_tag", methods=["POST"])
-def add_tag():
+@main.route("/update_tag", methods=["POST"])
+def update_tag():
+    """更新公共标签库"""
     d = request.json
-    tags = d.get("tags", [])
-    t = [Tag(name=tag) for tag in tags if tag]
-    db.session.add_all(t)
+    tag_add = set(d.get('tagAdd', []))
+    tag_remove = set(d.get('tagRemove', []))
+
+    # 添加新的标签
+    t = [Tag(name=tag) for tag in tag_add if tag]
+    if t:
+        db.session.add_all(t)
+
+    # 删除Tag表
+    if tag_remove:
+        tags_to_delete = Tag.query.filter(Tag.name.in_(tag_remove)).all()
+        # 逐个删除，触发before_delete事件
+        for tag in tags_to_delete:
+            db.session.delete(tag)
+
     db.session.commit()
     return jsonify(data="", msg="success", detail="")
-
-
-@main.route("/del_tag", methods=["DELETE"])
-def del_tag():
-    d = request.json
-    tags = d.get("tags", [])
-    if tags:
-        Tag.query.filter(Tag.name.in_(tags)).delete()
-        db.session.commit()
-    return jsonify(data='', msg='success')

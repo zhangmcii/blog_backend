@@ -11,7 +11,7 @@ import random
 from . import redis
 from .exceptions import ValidationError
 from enum import Enum
-from sqlalchemy import and_
+from sqlalchemy import and_, event
 
 
 class Permission:
@@ -696,6 +696,16 @@ class Tag(db.Model):
             'id': self.id,
             'name': self.name
         }
+
+
+# 为Tag模型添加删除前的事件监听。注意，批量删除不会触发，需要改为逐个删除
+@event.listens_for(Tag, 'before_delete')
+def delete_tag_cleanup(mapper, connection, target):
+    """删除Tag前，清理中间表中所有关联记录"""
+    # 删除中间表中该tag_id对应的所有记录
+    connection.execute(
+        user_tag.delete().where(user_tag.c.tag_id == target.id)
+    )
 
 
 user_tag = db.Table('user_tag',
