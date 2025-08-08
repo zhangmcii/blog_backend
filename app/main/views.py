@@ -85,9 +85,12 @@ def index():
     """处理博客文章的首页路由"""
     if request.method == 'POST' and current_user.can(Permission.WRITE):
         j = request.get_json()
+        summary = j.get('summary', '')
+        body = j.get('body')
         body_html = j.get('bodyHtml')
+        title = j.get('title', body[:10])
         images = j.get('images')
-        post = Post(body=j.get('body'), body_html=body_html if body_html else None,
+        post = Post(title=title, summary=summary, body=body, body_html=body_html if body_html else None,
                     type=PostType.IMAGE if body_html else PostType.TEXT,
                     author=current_user)
         db.session.add(post)

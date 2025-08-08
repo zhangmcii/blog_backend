@@ -1,5 +1,4 @@
 import os
-
 from flask import jsonify, request, url_for, current_app, abort
 from flask_jwt_extended import current_user, jwt_required
 from .. import db
@@ -92,3 +91,43 @@ def del_post(id):
         # 传递j,执行图片删除
         del_qiniu_image(**data)
     return jsonify(data='', msg='success', detail='')
+
+
+@api.route("/posts/timeline/<int:user_id>")
+def get_user_posts_grouped_by_year(user_id):
+    """获取当前用户按年度分组的文章时间轴数据"""
+    try:
+        # 查询当前用户已发布的文章，按年份和发布时间排序
+        posts = Post.query.filter(
+            Post.author_id == user_id,
+        ).order_by(
+            Post.year.desc(),  # 先按年份倒序
+            Post.timestamp.desc()  # 同一年的文章按发布时间倒序
+        ).all()
+
+        # 按年份分组，构建 {年份: 文章数组} 格式
+        timeline_data = {}
+        for post in posts:
+            # 获取年份作为键（整数类型，如2025）
+            year = post.year
+            # 如果该年份还没有在字典中，初始化一个空列表
+            if year not in timeline_data:
+                timeline_data[year] = []
+            # 将文章数据转换为字典并添加到对应年份的列表
+            timeline_data[year].append({
+                'id': post.id,
+                'title': post.title,
+                'timestamp': post.timestamp.strftime('%Y-%m-%d'),  # 格式化日期为字符串
+                'description': post.summary  # 假设用summary字段作为description
+            })
+
+        return jsonify(
+            data=timeline_data,  # 直接返回构建好的字典
+            msg='success'
+        )
+
+    except Exception as e:
+        return jsonify(
+            data={},  # 错误时返回空对象
+            msg=f'获取时间轴数据失败: {str(e)}'
+        )

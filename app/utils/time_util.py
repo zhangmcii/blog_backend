@@ -34,6 +34,10 @@ class DateUtils:
         return t.hour
 
     @staticmethod
+    def get_year():
+        return datetime.now().year
+
+    @staticmethod
     def datetime_to_str(date_time):
         return date_time.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -51,6 +55,7 @@ class DateUtils:
     @staticmethod
     def record_time(func):
         """记录函数执行时间"""
+
         @wraps(func)
         def decorate(*args, **kwargs):
             start = time.perf_counter()

@@ -401,12 +401,18 @@ class PostType(Enum):
 class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    # 文章摘要
+    summary = db.Column(db.String(500))
+
     body = db.Column(db.Text)
     body_html = db.Column(db.Text)
     type = db.Column(db.Enum(PostType))
     # images字段已废弃。暂时不硬删除
     images = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=DateUtils.now_time)
+    # 按“年度”分组，可冗余存储年份（避免每次查询用函数提取年份，影响性能）
+    year = db.Column(db.Integer, index=True, default=DateUtils.get_year)  # 发布年份（如 2023，由 timestamp 自动提取）
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     comments = db.relationship('Comment', backref='post', lazy='dynamic')

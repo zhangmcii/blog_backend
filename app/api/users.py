@@ -104,7 +104,6 @@ def search_fan():
 
 
 @api.route('/update_user', methods=['POST'])
-@jwt_required()
 def update_user_profile():
     for key, value in request.json.items():
         if hasattr(current_user, key):
